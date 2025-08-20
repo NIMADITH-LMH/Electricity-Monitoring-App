@@ -9,6 +9,7 @@ class CustomButton extends StatelessWidget {
   final bool isFullWidth;
   final IconData? icon;
   final double? height;
+  final double? width;
 
   const CustomButton({
     super.key,
@@ -19,6 +20,7 @@ class CustomButton extends StatelessWidget {
     this.isFullWidth = true,
     this.icon,
     this.height,
+    this.width,
   });
 
   @override
@@ -31,6 +33,7 @@ class CustomButton extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
+            fixedSize: width != null ? Size(width!, 36) : null,
           )
         : ElevatedButton.styleFrom(
             backgroundColor: Colors.white,
@@ -38,8 +41,9 @@ class CustomButton extends StatelessWidget {
             elevation: 1,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
-              side: BorderSide(color: AppTheme.primaryColor),
             ),
+            fixedSize: width != null ? Size(width!, 36) : null,
+            side: BorderSide(color: AppTheme.primaryColor),
           );
 
     Widget buttonContent = isLoading

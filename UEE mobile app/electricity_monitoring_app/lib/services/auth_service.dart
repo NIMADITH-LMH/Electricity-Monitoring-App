@@ -34,6 +34,47 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  // Get user document from Firestore
+  Future<DocumentSnapshot?> getUserDoc() async {
+    try {
+      if (_auth.currentUser == null) return null;
+
+      final doc = await _firestore
+          .collection('users')
+          .doc(_auth.currentUser!.uid)
+          .get();
+
+      if (doc.exists) {
+        return doc;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting user document: $e');
+      return null;
+    }
+  }
+
+  // Update a specific field in the user document
+  Future<bool> updateUserField(String fieldName, dynamic value) async {
+    try {
+      if (_auth.currentUser == null) return false;
+
+      await _firestore.collection('users').doc(_auth.currentUser!.uid).update({
+        fieldName: value,
+      });
+
+      // Update local user model if we have one
+      if (_user != null) {
+        await getCurrentUserData();
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error updating user field: $e');
+      return false;
+    }
+  }
+
   // Sign up with email and password
   Future<UserCredential?> signUp({
     required String email,

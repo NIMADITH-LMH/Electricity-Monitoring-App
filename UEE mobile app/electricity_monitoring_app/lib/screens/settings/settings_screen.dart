@@ -238,6 +238,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(height: 1),
                       _buildBudgetTile(),
                       const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.tune, color: Colors.blue),
+                        title: const Text('Advanced Notification Settings'),
+                        subtitle: const Text(
+                          'Configure personalized notification preferences',
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.of(
+                            context,
+                          ).pushNamed('/notification-preferences');
+                        },
+                      ),
+                      const Divider(height: 1),
                       _buildSwitchTile(
                         title: 'App Updates',
                         subtitle:

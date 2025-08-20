@@ -29,7 +29,9 @@ class CustomCard extends StatelessWidget {
       color: color ?? Colors.white,
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: padding ?? const EdgeInsets.all(16),
+        padding:
+            padding ??
+            const EdgeInsets.all(10), // Reduced padding from 16 to 10
         child: child,
       ),
     );

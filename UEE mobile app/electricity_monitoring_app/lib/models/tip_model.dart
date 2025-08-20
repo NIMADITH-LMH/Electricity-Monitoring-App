@@ -8,6 +8,9 @@ class TipModel {
   final DateTime createdAt;
   final String? category;
   final double? estimatedSavings;
+  final Map<String, dynamic> relevanceFactors;
+  final String difficulty; // 'easy', 'medium', 'hard'
+  final double potentialSavingsKwh;
 
   TipModel({
     required this.id,
@@ -17,7 +20,10 @@ class TipModel {
     required this.createdAt,
     this.category,
     this.estimatedSavings,
-  });
+    Map<String, dynamic>? relevanceFactors,
+    this.difficulty = 'medium',
+    this.potentialSavingsKwh = 0.0,
+  }) : this.relevanceFactors = relevanceFactors ?? {};
 
   factory TipModel.fromMap(Map<String, dynamic> map, String id) {
     return TipModel(
@@ -28,6 +34,11 @@ class TipModel {
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       category: map['category'],
       estimatedSavings: map['estimatedSavings']?.toDouble(),
+      relevanceFactors: Map<String, dynamic>.from(
+        map['relevanceFactors'] ?? {},
+      ),
+      difficulty: map['difficulty'] ?? 'medium',
+      potentialSavingsKwh: map['potentialSavingsKwh']?.toDouble() ?? 0.0,
     );
   }
 
@@ -39,6 +50,9 @@ class TipModel {
       'createdAt': createdAt,
       'category': category,
       'estimatedSavings': estimatedSavings,
+      'relevanceFactors': relevanceFactors,
+      'difficulty': difficulty,
+      'potentialSavingsKwh': potentialSavingsKwh,
     };
   }
 }

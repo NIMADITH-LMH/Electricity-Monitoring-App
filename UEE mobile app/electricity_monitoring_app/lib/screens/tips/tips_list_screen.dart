@@ -287,7 +287,7 @@ class _TipsListScreenState extends State<TipsListScreen> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  'Est. savings: \$${tip.estimatedSavings!.toStringAsFixed(2)}/year',
+                  'Est. savings: LKR ${tip.estimatedSavings!.toStringAsFixed(2)}/year',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,

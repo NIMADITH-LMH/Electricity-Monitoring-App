@@ -11,7 +11,8 @@ import '../models/usage_record_model.dart';
 import '../models/budget_model.dart';
 
 class ReportService {
-  // Generate a monthly usage report as PDF
+  // Generate a usage report as PDF (monthly or weekly)
+  // For backward compatibility
   static Future<String?> generateMonthlyReport({
     required List<UsageRecordModel> records,
     required int year,
@@ -20,13 +21,53 @@ class ReportService {
     required double totalKwh,
     required double totalCost,
   }) async {
+    // Convert parameters for the new method
+    final startDate = DateTime(year, month, 1);
+    final endDate = DateTime(year, month + 1, 0); // Last day of month
+
+    return generateReport(
+      records: records,
+      startDate: startDate,
+      endDate: endDate,
+      reportType: 'monthly',
+      budget: budget,
+      totalKwh: totalKwh,
+      totalCost: totalCost,
+    );
+  }
+
+  static Future<String?> generateReport({
+    required List<UsageRecordModel> records,
+    required DateTime startDate,
+    required DateTime endDate,
+    required String reportType, // 'weekly' or 'monthly'
+    required BudgetModel? budget,
+    required double totalKwh,
+    required double totalCost,
+  }) async {
     try {
       // Create a PDF document
       final pdf = pw.Document();
 
-      // Format month and year
-      final monthName = DateFormat('MMMM').format(DateTime(year, month));
-      final reportTitle = 'Electricity Usage Report - $monthName $year';
+      // Format report title based on type
+      String reportTitle;
+      String fileName;
+
+      if (reportType == 'monthly') {
+        final monthName = DateFormat('MMMM').format(startDate);
+        final year = startDate.year;
+        reportTitle = 'Monthly Electricity Usage Report - $monthName $year';
+        fileName =
+            'electricity_report_${year}_${startDate.month.toString().padLeft(2, '0')}.pdf';
+      } else {
+        // Weekly report
+        final startFormatted = DateFormat('MMM dd').format(startDate);
+        final endFormatted = DateFormat('MMM dd, yyyy').format(endDate);
+        reportTitle =
+            'Weekly Electricity Usage Report - $startFormatted to $endFormatted';
+        fileName =
+            'electricity_report_week_${startDate.year}_${startDate.month}_${startDate.day}.pdf';
+      }
 
       // Add content to the PDF
       pdf.addPage(
@@ -48,8 +89,6 @@ class ReportService {
       );
 
       // Save the PDF file
-      final String fileName =
-          'electricity_report_${year}_${month.toString().padLeft(2, '0')}.pdf';
       final directory = await getApplicationDocumentsDirectory();
       final filePath = '${directory.path}/$fileName';
 

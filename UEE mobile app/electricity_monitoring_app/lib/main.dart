@@ -6,6 +6,9 @@ import 'screens/splash_screen.dart';
 import 'screens/appliance/appliance_list_screen.dart';
 import 'screens/appliance/add_appliance_screen.dart';
 import 'screens/settings/settings_screen.dart';
+import 'screens/settings/notification_preferences_screen.dart';
+import 'screens/notifications/notifications_screen.dart';
+import 'screens/usage/usage_analytics_screen.dart';
 import 'utils/app_theme.dart';
 import 'services/auth_service.dart';
 import 'services/tip_service.dart';
@@ -13,6 +16,8 @@ import 'services/usage_record_service.dart';
 import 'services/appliance_service.dart';
 import 'services/budget_service.dart';
 import 'services/user_profile_service.dart';
+import 'services/usage_reminder_service.dart';
+import 'services/usage_analytics_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +39,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ApplianceService()),
         ChangeNotifierProvider(create: (_) => BudgetService()),
         ChangeNotifierProvider(create: (_) => UserProfileService()),
+        ChangeNotifierProvider(create: (_) => UsageReminderService()),
+        ChangeNotifierProvider(create: (_) => UsageAnalyticsService()),
       ],
       child: MaterialApp(
         title: 'Electricity Monitoring',
@@ -45,6 +52,10 @@ class MyApp extends StatelessWidget {
           '/appliances': (context) => const ApplianceListScreen(),
           '/add-appliance': (context) => const AddApplianceScreen(),
           '/settings': (context) => const SettingsScreen(),
+          '/notification-preferences': (context) =>
+              NotificationPreferencesScreen(),
+          '/notifications': (context) => NotificationsScreen(),
+          '/usage-analytics': (context) => UsageAnalyticsScreen(),
           // We can't use routes for EditApplianceScreen because it needs an appliance parameter
         },
       ),

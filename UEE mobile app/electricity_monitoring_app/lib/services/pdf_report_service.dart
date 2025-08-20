@@ -171,7 +171,7 @@ class PdfReportService {
                   ),
                   _buildSummaryRow(
                     'Maximum Cost:',
-                    '\$${budget.maxCost.toStringAsFixed(2)}',
+                    'LKR ${budget.maxCost.toStringAsFixed(2)}',
                   ),
                   pw.Divider(),
                   _buildSummaryRow(
@@ -180,7 +180,7 @@ class PdfReportService {
                   ),
                   _buildSummaryRow(
                     'Actual Cost:',
-                    '\$${totalCost.toStringAsFixed(2)} (${costPercentage.toStringAsFixed(0)}%)',
+                    'LKR ${totalCost.toStringAsFixed(2)} (${costPercentage.toStringAsFixed(0)}%)',
                   ),
                   pw.Divider(),
                   _buildSummaryRow(
@@ -293,7 +293,7 @@ class PdfReportService {
                   ),
                   _buildSummaryRow(
                     'Total Cost:',
-                    '\$${totalCost.toStringAsFixed(2)}',
+                    'LKR ${totalCost.toStringAsFixed(2)}',
                   ),
                   _buildSummaryRow(
                     'Average Daily Usage:',
@@ -376,7 +376,7 @@ class PdfReportService {
                   _buildSummaryRow('Total Tips:', '${filteredTips.length}'),
                   _buildSummaryRow(
                     'Estimated Annual Savings:',
-                    '\$${_calculateTotalSavings(filteredTips).toStringAsFixed(2)}',
+                    'LKR ${_calculateTotalSavings(filteredTips).toStringAsFixed(2)}',
                   ),
                 ],
               ),
@@ -455,7 +455,7 @@ class PdfReportService {
             children: [
               _buildTableCell(DateFormat('MMM dd, yyyy').format(record.date)),
               _buildTableCell(record.totalKwh.toStringAsFixed(2)),
-              _buildTableCell('\$${record.totalCost.toStringAsFixed(2)}'),
+              _buildTableCell('LKR ${record.totalCost.toStringAsFixed(2)}'),
             ],
           ),
         ),
@@ -503,7 +503,7 @@ class PdfReportService {
                     pw.Padding(
                       padding: const pw.EdgeInsets.only(top: 4),
                       child: pw.Text(
-                        'Estimated Savings: \$${tip.estimatedSavings!.toStringAsFixed(2)} per year',
+                        'Estimated Savings: LKR ${tip.estimatedSavings!.toStringAsFixed(2)} per year',
                         style: pw.TextStyle(
                           fontWeight: pw.FontWeight.bold,
                           color: PdfColors.green700,

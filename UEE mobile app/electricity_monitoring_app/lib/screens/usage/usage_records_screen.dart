@@ -172,7 +172,7 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
                   ),
                   if (filteredRecords.isNotEmpty)
                     ElevatedButton.icon(
-                      onPressed: () => _generateMonthlyReport(),
+                      onPressed: () => _showReportOptionsDialog(),
                       icon: const Icon(Icons.download, size: 16),
                       label: const Text('Generate Report'),
                       style: ElevatedButton.styleFrom(
@@ -307,7 +307,7 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
                         ),
                       ),
                       Text(
-                        '\$${record.totalCost.toStringAsFixed(2)}',
+                        'LKR ${record.totalCost.toStringAsFixed(2)}',
                         style: const TextStyle(
                           fontSize: 14,
                           color: AppTheme.accentColor,
@@ -367,7 +367,7 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
                 _buildDetailRow('Energy Used', '${record.totalKwh} kWh'),
                 _buildDetailRow(
                   'Cost',
-                  '\$${record.totalCost.toStringAsFixed(2)}',
+                  'LKR ${record.totalCost.toStringAsFixed(2)}',
                 ),
 
                 // No hoursUsed field in model
@@ -606,7 +606,7 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
                 TextFormField(
                   controller: costController,
                   decoration: const InputDecoration(
-                    labelText: 'Cost (\$)',
+                    labelText: 'Cost (LKR)',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.attach_money),
                   ),
@@ -789,6 +789,173 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
     );
   }
 
+  void _showReportOptionsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Generate Report',
+          style: TextStyle(color: AppTheme.secondaryColor),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Select report type:'),
+            const SizedBox(height: 16),
+
+            // Weekly Report Option
+            ListTile(
+              leading: const Icon(
+                Icons.date_range,
+                color: AppTheme.primaryColor,
+              ),
+              title: const Text('Weekly Report'),
+              subtitle: const Text('Generate report for the last 7 days'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.5)),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _generateWeeklyReport();
+              },
+            ),
+
+            const SizedBox(height: 8),
+
+            // Monthly Report Option
+            ListTile(
+              leading: const Icon(
+                Icons.calendar_month,
+                color: AppTheme.secondaryColor,
+              ),
+              title: const Text('Monthly Report'),
+              subtitle: const Text('Generate report for the selected month'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: AppTheme.secondaryColor.withOpacity(0.5),
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _generateMonthlyReport();
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _generateWeeklyReport() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final usageService = Provider.of<UsageRecordService>(
+        context,
+        listen: false,
+      );
+      final budgetService = Provider.of<BudgetService>(context, listen: false);
+
+      // Define the date range for the weekly report
+      final endDate = DateTime.now();
+      final startDate = endDate.subtract(
+        const Duration(days: 6),
+      ); // Last 7 days
+
+      // Get records for the selected date range
+      final weeklyRecords = usageService.getRecordsForDateRange(
+        startDate,
+        endDate,
+      );
+
+      // Calculate totals using the service methods
+      final totalKwh = usageService.getTotalKwhForDateRange(startDate, endDate);
+      final totalCost = usageService.getTotalCostForDateRange(
+        startDate,
+        endDate,
+      );
+
+      // Get current month's budget (approximate for weekly)
+      final currentMonth =
+          '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}';
+      final budget = budgetService.getBudgetForMonth(currentMonth);
+
+      // Generate the report
+      final filePath = await ReportService.generateReport(
+        records: weeklyRecords,
+        startDate: startDate,
+        endDate: endDate,
+        reportType: 'weekly',
+        budget: budget,
+        totalKwh: totalKwh,
+        totalCost: totalCost,
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (filePath != null) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Weekly Report Generated'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your weekly electricity usage report for ${DateFormat('MMM dd').format(startDate)} - ${DateFormat('MMM dd, yyyy').format(endDate)} has been created.',
+                ),
+                const SizedBox(height: 8),
+                const Text('The report includes:'),
+                const SizedBox(height: 4),
+                const Text('• Weekly usage summary'),
+                const Text('• Budget comparison'),
+                const Text('• Daily usage details'),
+                const SizedBox(height: 8),
+                Text(
+                  'Saved to: $filePath',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to generate weekly report')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error generating weekly report: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An error occurred while generating the weekly report'),
+        ),
+      );
+    }
+  }
+
   void _generateMonthlyReport() async {
     if (_selectedMonth == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -813,6 +980,10 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
       final year = int.parse(dateParts[0]);
       final month = int.parse(dateParts[1]);
 
+      // Create date range for the month
+      final startDate = DateTime(year, month, 1);
+      final endDate = DateTime(year, month + 1, 0); // Last day of month
+
       // Get all records for the selected month
       final filteredRecords = _filterRecords(usageService.usageRecords);
 
@@ -823,11 +994,12 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
       // Get budget for the month
       final budget = budgetService.getBudgetForMonth(_selectedMonth!);
 
-      // Generate the report
-      final filePath = await ReportService.generateMonthlyReport(
+      // Generate the report using the new method
+      final filePath = await ReportService.generateReport(
         records: filteredRecords,
-        year: year,
-        month: month,
+        startDate: startDate,
+        endDate: endDate,
+        reportType: 'monthly',
         budget: budget,
         totalKwh: totalKwh,
         totalCost: totalCost,
