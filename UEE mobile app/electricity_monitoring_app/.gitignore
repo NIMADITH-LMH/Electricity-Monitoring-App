@@ -1,0 +1,8 @@
+# Ignore build outputs
+build/
+/build/
+
+# Specifically ignore large Flutter binary files
+**/*.so
+**/app/intermediates/
+**/libFlutter.so
