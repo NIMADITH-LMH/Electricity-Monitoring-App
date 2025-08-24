@@ -19,7 +19,7 @@ class UserTipModel {
     this.implemented = false,
     this.resultEffectiveness,
     DateTime? lastUpdatedAt,
-  }) : this.lastUpdatedAt = lastUpdatedAt ?? DateTime.now();
+  }) : lastUpdatedAt = lastUpdatedAt ?? DateTime.now();
 
   factory UserTipModel.fromMap(Map<String, dynamic> map, String id) {
     return UserTipModel(

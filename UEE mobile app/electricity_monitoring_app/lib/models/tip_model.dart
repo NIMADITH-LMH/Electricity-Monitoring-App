@@ -23,7 +23,7 @@ class TipModel {
     Map<String, dynamic>? relevanceFactors,
     this.difficulty = 'medium',
     this.potentialSavingsKwh = 0.0,
-  }) : this.relevanceFactors = relevanceFactors ?? {};
+  }) : relevanceFactors = relevanceFactors ?? {};
 
   factory TipModel.fromMap(Map<String, dynamic> map, String id) {
     return TipModel(

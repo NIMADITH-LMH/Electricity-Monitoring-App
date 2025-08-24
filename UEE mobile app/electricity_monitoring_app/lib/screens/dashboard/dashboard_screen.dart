@@ -14,7 +14,6 @@ import '../appliance/appliance_list_screen.dart';
 import '../budget/budget_screen.dart';
 import '../usage/usage_records_screen.dart';
 import '../tips/tips_list_screen.dart';
-import '../auth/login_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   static const routeName = '/dashboard';

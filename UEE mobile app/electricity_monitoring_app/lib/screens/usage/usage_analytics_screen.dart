@@ -12,6 +12,8 @@ import '../../widgets/loading_indicator.dart';
 class UsageAnalyticsScreen extends StatefulWidget {
   static const routeName = '/usage-analytics';
 
+  const UsageAnalyticsScreen({super.key});
+
   @override
   _UsageAnalyticsScreenState createState() => _UsageAnalyticsScreenState();
 }

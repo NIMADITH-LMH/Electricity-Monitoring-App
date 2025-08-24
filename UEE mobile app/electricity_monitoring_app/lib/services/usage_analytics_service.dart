@@ -10,7 +10,7 @@ class UsageAnalyticsService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // Cache for analytics results
-  Map<String, UsageAnalyticsModel> _analyticsCache = {};
+  final Map<String, UsageAnalyticsModel> _analyticsCache = {};
   List<UsageDataPoint> _dataPoints = [];
   List<UsagePredictionModel> _predictions = [];
 

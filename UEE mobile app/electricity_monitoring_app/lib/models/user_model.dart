@@ -13,7 +13,7 @@ class UserModel {
     required this.email,
     required this.createdAt,
     NotificationPreferences? notificationPreferences,
-  }) : this.notificationPreferences =
+  }) : notificationPreferences =
            notificationPreferences ?? NotificationPreferences();
 
   factory UserModel.fromMap(Map<String, dynamic> map, String id) {
@@ -75,7 +75,7 @@ class NotificationPreferences {
 
     // Thresholds
     Map<String, double>? usageThresholds,
-  }) : this.usageThresholds =
+  }) : usageThresholds =
            usageThresholds ??
            {
              'daily': 10.0, // Default 10 kWh daily threshold

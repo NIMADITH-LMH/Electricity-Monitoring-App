@@ -22,7 +22,7 @@ class NotificationModel {
     required this.createdAt,
     this.isRead = false,
     Map<String, dynamic>? metadata,
-  }) : this.metadata = metadata ?? {};
+  }) : metadata = metadata ?? {};
 
   factory NotificationModel.fromMap(Map<String, dynamic> map, String id) {
     return NotificationModel(
