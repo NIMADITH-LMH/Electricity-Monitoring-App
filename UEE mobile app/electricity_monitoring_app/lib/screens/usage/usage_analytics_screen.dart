@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_card.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../widgets/prediction_card.dart';
 
 class UsageAnalyticsScreen extends StatefulWidget {
   static const routeName = '/usage-analytics';
@@ -23,6 +25,9 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
   bool _isLoading = true;
   String _selectedPeriod = 'monthly'; // Default period
   TabController? _tabController;
+  
+  // Add debounce timer
+  Timer? _debounceTimer;
 
   UsageAnalyticsModel? _analytics;
   List<UsageDataPoint> _chartData = [];
@@ -39,6 +44,7 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
   @override
   void dispose() {
     _tabController?.dispose();
+    _debounceTimer?.cancel(); // Cancel debounce timer
     super.dispose();
   }
 
@@ -49,41 +55,60 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
 
     try {
       final analyticsService = Provider.of<UsageAnalyticsService>(
-        context,
+        context, 
         listen: false,
       );
 
-      // Load usage analytics for selected period
-      _analytics = await analyticsService.getUsageAnalytics(
-        period: _selectedPeriod,
+      // Load data sequentially to avoid isolate issues
+      final analytics = await analyticsService.getUsageAnalytics(
+        period: _selectedPeriod
       );
-
-      // Load historical data for charts
-      _chartData = await analyticsService.getHistoricalUsageData(
-        period: _selectedPeriod,
+      
+      final chartData = await analyticsService.getHistoricalUsageData(
+        period: _selectedPeriod
       );
+      
+      final predictions = await analyticsService.predictFutureUsage();
+      
+      final dailyBreakdown = await analyticsService.getDailyUsageBreakdown();
 
-      // Load predictions
-      _predictions = await analyticsService.predictFutureUsage();
-
-      // Load daily breakdown
-      _dailyBreakdown = await analyticsService.getDailyUsageBreakdown();
+      // Only update state if the widget is still mounted
+      if (mounted) {
+        setState(() {
+          _analytics = analytics;
+          _chartData = chartData;
+          _predictions = predictions;
+          _dailyBreakdown = dailyBreakdown;
+        });
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading analytics data: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading analytics data: $e')),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
+  // Use debounce pattern to avoid excessive reloads
   void _changePeriod(String period) {
+    // Cancel existing timer if any
+    _debounceTimer?.cancel();
+    
     setState(() {
       _selectedPeriod = period;
     });
-    _loadAnalyticsData();
+    
+    // Use debounce timer to prevent rapid consecutive calls
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _loadAnalyticsData();
+    });
   }
 
   @override
@@ -228,32 +253,35 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
                       ),
                       const SizedBox(height: 8),
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             analytics.isKwhIncreased
                                 ? Icons.arrow_upward
                                 : Icons.arrow_downward,
-                            size: 14, // Reduced from 16
+                            size: 12, // Further reduced from 14
                             color: analytics.getKwhTrendColor(),
                           ),
                           const SizedBox(width: 2), // Reduced from 4
                           Flexible(
                             child: Text(
                               analytics.getFormattedKwhChange(),
+                              textScaleFactor: 0.9,
                               style: TextStyle(
-                                fontSize: 11, // Added smaller font size
+                                fontSize: 10, // Further reduced from 11
                                 color: analytics.getKwhTrendColor(),
                                 fontWeight: FontWeight.bold,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 2), // Reduced from 4
+                          const SizedBox(width: 1), // Further reduced from 2
                           Flexible(
                             child: Text(
                               'vs previous',
+                              textScaleFactor: 0.9,
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 10, // Reduced from 11
                                 color: Colors.grey,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -289,34 +317,37 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6), // Reduced from 8
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             analytics.isCostIncreased
                                 ? Icons.arrow_upward
                                 : Icons.arrow_downward,
-                            size: 14, // Reduced from 16
+                            size: 12, // Further reduced from 14
                             color: analytics.getCostTrendColor(),
                           ),
-                          const SizedBox(width: 2), // Reduced from 4
+                          const SizedBox(width: 1), // Further reduced from 2
                           Flexible(
                             child: Text(
                               analytics.getFormattedCostChange(),
+                              textScaleFactor: 0.9,
                               style: TextStyle(
-                                fontSize: 11, // Added smaller font size
+                                fontSize: 10, // Further reduced from 11
                                 color: analytics.getCostTrendColor(),
                                 fontWeight: FontWeight.bold,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 2), // Reduced from 4
+                          const SizedBox(width: 1), // Further reduced from 2
                           Flexible(
                             child: Text(
                               'vs previous',
+                              textScaleFactor: 0.9,
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 10, // Reduced from 11
                                 color: Colors.grey,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -484,7 +515,7 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
     }
 
     return Padding(
-      padding: const EdgeInsets.only(top: 8.0), // Reduced from 16.0
+      padding: const EdgeInsets.only(top: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -493,102 +524,24 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-            ), // Reduced from 18
+              shadows: [
+                Shadow(
+                  blurRadius: 4.0,
+                  color: Colors.black.withOpacity(0.3),
+                  offset: const Offset(1, 1),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8), // Reduced from 16
+          const SizedBox(height: 12),
           Expanded(
             child: ListView.builder(
               itemCount: _predictions.length,
               itemBuilder: (context, index) {
                 final prediction = _predictions[index];
-                final date = DateFormat('MMM d, yyyy').format(prediction.date);
-
-                return CustomCard(
-                  child: Padding(
-                    padding: const EdgeInsets.all(
-                      6.0,
-                    ), // Further reduced from 8.0
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              date,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14, // Reduced from 16
-                              ),
-                            ),
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.blue[50],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${prediction.confidencePercentage.toInt()}% confidence',
-                                style: TextStyle(
-                                  color: Colors.blue[800],
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8), // Reduced from 12
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Predicted Usage',
-                                  style: TextStyle(
-                                    color: Colors.grey[700],
-                                    fontSize: 12, // Reduced from 14
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${prediction.predictedKwh.toStringAsFixed(1)} kWh',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'Predicted Cost',
-                                  style: TextStyle(
-                                    color: Colors.grey[700],
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'LKR ${prediction.predictedCost.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: PredictionCard(prediction: prediction),
                 );
               },
             ),
@@ -638,13 +591,13 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
           Expanded(
             child: Column(
               children: [
-                // Pie chart for usage breakdown
-                Expanded(flex: 2, child: _buildPieChart()),
-                const SizedBox(height: 4), // Further reduced from 8
+                // Pie chart for usage breakdown with reduced size
+                Expanded(flex: 1, child: _buildPieChart()),
                 // Legend and details
                 Expanded(
-                  flex: 3,
+                  flex: 5, // Further increased from 4
                   child: Column(
+                    mainAxisSize: MainAxisSize.min, // Added to minimize column size
                     children: [
                       _buildBreakdownRow(
                         'Morning',
@@ -652,21 +605,18 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
                         breakdown.morningPercentage,
                         Colors.blue[400]!,
                       ),
-                      const SizedBox(height: 1), // Further reduced spacing
                       _buildBreakdownRow(
                         'Afternoon',
                         breakdown.afternoonUsage,
                         breakdown.afternoonPercentage,
                         Colors.amber[400]!,
                       ),
-                      const SizedBox(height: 1), // Further reduced spacing
                       _buildBreakdownRow(
                         'Evening',
                         breakdown.eveningUsage,
                         breakdown.eveningPercentage,
                         Colors.purple[400]!,
                       ),
-                      const SizedBox(height: 1), // Further reduced spacing
                       _buildBreakdownRow(
                         'Night',
                         breakdown.nightUsage,
@@ -691,36 +641,50 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
     Color color,
   ) {
     return Row(
+      mainAxisSize: MainAxisSize.min, // Added to ensure row takes minimum space
       children: [
         Container(
-          width: 6, // Further reduced from 8
-          height: 6, // Further reduced from 8
+          width: 4, // Further reduced from 5
+          height: 4, // Further reduced from 5
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        const SizedBox(width: 2), // Further reduced from 4
+        const SizedBox(width: 1), // Minimum spacing
         Expanded(
-          flex: 2,
+          flex: 3, // Increased from 2
           child: Text(
             label,
-            style: TextStyle(fontSize: 10), // Further reduced font size
-          ),
-        ),
-        Expanded(
-          flex: 1,
-          child: Text(
-            '${usage.toStringAsFixed(1)} kWh',
+            textScaleFactor: 0.85, // Further reduced scale factor
+            maxLines: 1, // Ensure single line
             style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 10, // Further reduced font size
+              fontSize: 9, // Further reduced font size
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ),
         Expanded(
-          flex: 1,
+          flex: 2, // Increased from 1
+          child: Text(
+            '${usage.toStringAsFixed(1)} kWh',
+            textScaleFactor: 0.85, // Further reduced scale factor
+            maxLines: 1, // Ensure single line
+            style: TextStyle(
+              fontWeight: FontWeight.w500, // Less bold
+              fontSize: 8, // Further reduced font size
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 1, // Same flex
           child: Text(
             '${percentage.toStringAsFixed(0)}%',
             textAlign: TextAlign.right,
-            style: TextStyle(fontSize: 10), // Reduced font size
+            textScaleFactor: 0.85, // Further reduced scale factor
+            maxLines: 1, // Ensure single line
+            style: TextStyle(
+              fontSize: 8, // Further reduced font size
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
       ],
@@ -855,50 +819,50 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
         value: breakdown.morningUsage,
         title: '${breakdown.morningPercentage.toInt()}%',
         color: Colors.blue[400],
-        radius: 70, // Further reduced from 80
+        radius: 60, // Further reduced from 70
         titleStyle: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
-          fontSize: 10, // Further reduced from 12
+          fontSize: 9, // Further reduced from 10
         ),
       ),
       PieChartSectionData(
         value: breakdown.afternoonUsage,
         title: '${breakdown.afternoonPercentage.toInt()}%',
         color: Colors.amber[400],
-        radius: 70, // Further reduced from 80
+        radius: 60, // Further reduced from 70
         titleStyle: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
-          fontSize: 10, // Further reduced from 12
+          fontSize: 9, // Further reduced from 10
         ),
       ),
       PieChartSectionData(
         value: breakdown.eveningUsage,
         title: '${breakdown.eveningPercentage.toInt()}%',
         color: Colors.purple[400],
-        radius: 70, // Further reduced from 80
+        radius: 60, // Further reduced from 70
         titleStyle: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
-          fontSize: 10, // Further reduced from 12
+          fontSize: 9, // Further reduced from 10
         ),
       ),
       PieChartSectionData(
         value: breakdown.nightUsage,
         title: '${breakdown.nightPercentage.toInt()}%',
         color: Colors.grey[700],
-        radius: 70, // Further reduced from 80
+        radius: 60, // Further reduced from 70
         titleStyle: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
-          fontSize: 10, // Further reduced from 12
+          fontSize: 9, // Further reduced from 10
         ),
       ),
     ];
 
     return PieChart(
-      PieChartData(sectionsSpace: 1, centerSpaceRadius: 30, sections: sections),
+      PieChartData(sectionsSpace: 0, centerSpaceRadius: 20, sections: sections),
     );
   }
 }

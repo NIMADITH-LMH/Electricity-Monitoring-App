@@ -1,19 +1,23 @@
+import 'dart:async';
+import 'dart:isolate';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/appliance_service.dart';
-import '../../services/budget_service.dart';
 import '../../services/usage_record_service.dart';
 import '../../services/tip_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/usage_reminder_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/custom_card.dart';
+import '../../widgets/elegant_usage_card.dart';
 import '../../widgets/loading_indicator.dart';
 import '../appliance/appliance_list_screen.dart';
 import '../budget/budget_screen.dart';
 import '../usage/usage_records_screen.dart';
 import '../tips/tips_list_screen.dart';
+import '../../providers/budget_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
   static const routeName = '/dashboard';
@@ -27,55 +31,72 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
   String _userName = '';
+  Timer? _debounceTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
   }
+  
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
 
   Future<void> _loadData() async {
-    final authService = Provider.of<AuthService>(context, listen: false);
-
-    try {
-      // Get user info
-      final user = await authService.getCurrentUserData();
-      if (user != null) {
-        setState(() {
-          _userName = user.name;
-        });
+    // Cancel any existing debounce timer
+    _debounceTimer?.cancel();
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    // Use debounce to prevent excessive loading
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      final authService = Provider.of<AuthService>(context, listen: false);
+  
+      try {
+        // Get user info
+        final user = await authService.getCurrentUserData();
+        if (user != null && mounted) {
+          setState(() {
+            _userName = user.name;
+          });
+        }
+  
+        // Preload appliances data
+        await Provider.of<ApplianceService>(
+          context,
+          listen: false,
+        ).fetchAppliances();
+  
+      // No need to explicitly load budget data here anymore
+      // The BudgetService stream will handle this automatically        // Preload usage records
+        await Provider.of<UsageRecordService>(
+          context,
+          listen: false,
+        ).fetchUsageRecords();
+  
+        // Preload energy saving tips
+        await Provider.of<TipService>(context, listen: false).fetchTips();
+  
+        // Initialize notifications
+        await NotificationService().initialize();
+  
+        // Initialize usage reminders
+        await _initializeUsageReminders();
+      } catch (e) {
+        debugPrint('Error loading data: $e');
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
-
-      // Preload appliances data
-      await Provider.of<ApplianceService>(
-        context,
-        listen: false,
-      ).fetchAppliances();
-
-      // Preload budget data
-      await Provider.of<BudgetService>(context, listen: false).fetchBudgets();
-
-      // Preload usage records
-      await Provider.of<UsageRecordService>(
-        context,
-        listen: false,
-      ).fetchUsageRecords();
-
-      // Preload energy saving tips
-      await Provider.of<TipService>(context, listen: false).fetchTips();
-
-      // Initialize notifications
-      await NotificationService().initialize();
-
-      // Initialize usage reminders
-      await _initializeUsageReminders();
-    } catch (e) {
-      debugPrint('Error loading data: $e');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    });
   }
 
   Future<void> _signOut() async {
@@ -186,308 +207,164 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(icon: const Icon(Icons.logout), onPressed: _signOut),
         ],
       ),
-      body: _isLoading
-          ? const LoadingIndicator(message: 'Loading your data...')
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Welcome section
-                  Text(
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/electricity managing mobile app background image.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: _isLoading
+            ? const LoadingIndicator(message: 'Loading your data...')
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Welcome section
+                    Text(
                     'Hello, $_userName!',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.textColor,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          blurRadius: 4.0,
+                          color: Colors.black.withOpacity(0.5),
+                          offset: const Offset(1, 1),
+                        ),
+                      ],
                     ),
                   ),
-                  const Text(
+                  Text(
                     'Welcome to your electricity monitoring dashboard',
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppTheme.lightTextColor,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          blurRadius: 2.0,
+                          color: Colors.black.withOpacity(0.3),
+                          offset: const Offset(1, 1),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 24),
 
-                  // Current month usage
-                  _buildCurrentUsageSection(),
-                  const SizedBox(height: 24),
+                    // Current month usage
+                    _buildCurrentUsageSection(),
+                    const SizedBox(height: 24),
 
-                  // Quick actions grid
-                  _buildQuickActionsGrid(),
-                  const SizedBox(height: 24),
+                    // Quick actions grid
+                    _buildQuickActionsGrid(),
+                    const SizedBox(height: 24),
 
-                  // Recent tips
-                  _buildRecentTipsSection(),
-                ],
+                    // Recent tips
+                    _buildRecentTipsSection(),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
+  // Optimized using StreamBuilder to prevent multiple budget fetches
   Widget _buildCurrentUsageSection() {
-    final budgetService = Provider.of<BudgetService>(context);
-    final usageService = Provider.of<UsageRecordService>(context);
+    final usageService = Provider.of<UsageRecordService>(context, listen: false);
     final now = DateTime.now();
+    final month = _getMonthName(now.month);
+    final year = now.year.toString();
 
-    // Get current month's budget
-    final currentBudget = budgetService.getCurrentMonthBudget();
-    // Debug print to see what's happening
-    debugPrint('CurrentBudget: ${currentBudget?.toMap()}');
-    debugPrint('CurrentBudget maxKwh: ${currentBudget?.maxKwh}');
-    debugPrint('CurrentBudget maxCost: ${currentBudget?.maxCost}');
-
-    // Get current month's usage
+    // Get current usage data - can be cached
     final totalKwh = usageService.getTotalKwhForMonth(now.year, now.month);
     final totalCost = usageService.getTotalCostForMonth(now.year, now.month);
-    debugPrint('Total kWh: $totalKwh');
-    debugPrint('Total cost: $totalCost');
-
-    // Calculate budget usage percentages
-    double kwhPercentage = 0;
-    double costPercentage = 0;
-
-    if (currentBudget != null) {
-      debugPrint(
-        'Calculating percentages with maxKwh: ${currentBudget.maxKwh}',
-      );
-      kwhPercentage = currentBudget.maxKwh > 0
-          ? (totalKwh / currentBudget.maxKwh) * 100
-          : 0;
-      costPercentage = currentBudget.maxCost > 0
-          ? (totalCost / currentBudget.maxCost) * 100
-          : 0;
-      debugPrint('kWh percentage: $kwhPercentage');
-      debugPrint('Cost percentage: $costPercentage');
-    }
-
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Current Month Usage',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: AppTheme.textColor,
-          ),
-        ),
-        const SizedBox(height: 12),
-        CustomCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Month and Year
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${_getMonthName(now.month)} ${now.year}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.secondaryColor,
-                    ),
-                  ),
-                  if (currentBudget != null) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: costPercentage < 90
-                            ? AppTheme.successColor.withOpacity(0.1)
-                            : costPercentage < 100
-                            ? AppTheme.warningColor.withOpacity(0.1)
-                            : AppTheme.errorColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        costPercentage < 90
-                            ? 'Within Budget'
-                            : costPercentage < 100
-                            ? 'Approaching Limit'
-                            : 'Over Budget',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: costPercentage < 90
-                              ? AppTheme.successColor
-                              : costPercentage < 100
-                              ? AppTheme.warningColor
-                              : AppTheme.errorColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+            color: Colors.white,
+            shadows: [
+              Shadow(
+                blurRadius: 4.0,
+                color: Colors.black.withOpacity(0.5),
+                offset: const Offset(1, 1),
               ),
-              const SizedBox(height: 16),
-
-              // Usage stats
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildUsageStat(
-                      'Consumption',
-                      '$totalKwh kWh${currentBudget != null ? ' / ${currentBudget.maxKwh} kWh' : ''}',
-                      currentBudget != null
-                          ? '${kwhPercentage.toStringAsFixed(0)}% of budget'
-                          : null,
-                      kwhPercentage,
-                      icon: Icons.bolt,
-                      iconColor: AppTheme.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildUsageStat(
-                      'Cost',
-                      'LKR ${totalCost.toStringAsFixed(2)}',
-                      currentBudget != null
-                          ? '${costPercentage.toStringAsFixed(0)}% of budget'
-                          : null,
-                      costPercentage,
-                      icon: Icons.attach_money,
-                      iconColor: AppTheme.accentColor,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // View details button
-              if (currentBudget != null) ...[
-                OutlinedButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const BudgetScreen(),
-                      ),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.primaryColor,
-                    side: const BorderSide(color: AppTheme.primaryColor),
-                  ),
-                  child: const Text('View Budget Details'),
-                ),
-              ] else ...[
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const BudgetScreen(),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.secondaryColor,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Set a Budget'),
-                ),
-              ],
             ],
           ),
         ),
+        const SizedBox(height: 12),
+        Consumer<BudgetProvider>(
+          builder: (context, provider, child) {
+            if (provider.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            // Get the current budget from the provider
+            final currentBudget = provider.currentBudget;
+            
+            // Calculate usage percentages with null safety
+            double kwhPercentage = 0;
+            double costPercentage = 0;
+            double maxKwh = currentBudget?.maxKwh ?? 160.0; // Default if null
+            double maxCost = currentBudget?.maxCost ?? 1000.0; // Default if null
+            
+            if (currentBudget != null && maxKwh > 0) {
+              kwhPercentage = (totalKwh / maxKwh) * 100;
+            }
+            
+            if (currentBudget != null && maxCost > 0) {
+              costPercentage = (totalCost / maxCost) * 100;
+            }
+            
+            return ElegantUsageCard(
+              month: month,
+              year: year,
+              totalKwh: totalKwh,
+              maxKwh: maxKwh,
+              kwhPercentage: kwhPercentage,
+              totalCost: totalCost,
+              maxCost: maxCost,
+              costPercentage: costPercentage,
+              onViewDetails: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const BudgetScreen(),
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ],
     );
   }
 
-  Widget _buildUsageStat(
-    String title,
-    String value,
-    String? subvalue,
-    double percentage, {
-    required IconData icon,
-    required Color iconColor,
-  }) {
-    Color progressColor = AppTheme.successColor;
 
-    if (percentage >= 100) {
-      progressColor = AppTheme.errorColor;
-    } else if (percentage >= 90) {
-      progressColor = AppTheme.warningColor;
-    } else if (percentage >= 75) {
-      progressColor = AppTheme.accentColor;
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: iconColor, size: 16),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.lightTextColor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textColor,
-          ),
-        ),
-        if (subvalue != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            subvalue,
-            style: TextStyle(
-              fontSize: 12,
-              color: percentage < 90
-                  ? AppTheme.lightTextColor
-                  : percentage < 100
-                  ? AppTheme.warningColor
-                  : AppTheme.errorColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Progress bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: percentage / 100 > 1 ? 1 : percentage / 100,
-              backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-              minHeight: 6,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
 
   Widget _buildQuickActionsGrid() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Quick Actions',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: AppTheme.textColor,
+            color: Colors.white,
+            shadows: [
+              Shadow(
+                blurRadius: 4.0,
+                color: Colors.black.withOpacity(0.5),
+                offset: const Offset(1, 1),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 12),
@@ -612,12 +489,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Energy Saving Tips',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.textColor,
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    blurRadius: 4.0,
+                    color: Colors.black.withOpacity(0.5),
+                    offset: const Offset(1, 1),
+                  ),
+                ],
               ),
             ),
             TextButton(

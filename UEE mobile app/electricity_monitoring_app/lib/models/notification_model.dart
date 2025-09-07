@@ -25,6 +25,14 @@ class NotificationModel {
   }) : metadata = metadata ?? {};
 
   factory NotificationModel.fromMap(Map<String, dynamic> map, String id) {
+    // Safe timestamp handling
+    DateTime notificationCreatedAt;
+    if (map['createdAt'] != null && map['createdAt'] is Timestamp) {
+      notificationCreatedAt = (map['createdAt'] as Timestamp).toDate();
+    } else {
+      notificationCreatedAt = DateTime.now();
+    }
+    
     return NotificationModel(
       id: id,
       userId: map['userId'] ?? '',
@@ -34,7 +42,7 @@ class NotificationModel {
         (type) => type.toString() == map['type'],
         orElse: () => NotificationType.system,
       ),
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      createdAt: notificationCreatedAt,
       isRead: map['isRead'] ?? false,
       metadata: Map<String, dynamic>.from(map['metadata'] ?? {}),
     );

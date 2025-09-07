@@ -52,11 +52,6 @@ class BudgetService extends ChangeNotifier {
       debugPrint('Error loading budgets: $e');
     }
   }
-  
-  // Public method to fetch budgets, for backward compatibility with existing code
-  Future<void> fetchBudgets() async {
-    return _loadBudgets();
-  }
 
   // Getters
   List<BudgetModel> get budgets => _budgets;

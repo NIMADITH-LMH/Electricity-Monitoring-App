@@ -6,6 +6,7 @@ import '../../utils/app_theme.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../widgets/background_container.dart';
 import 'add_appliance_screen.dart';
 import 'edit_appliance_screen.dart';
 
@@ -54,11 +55,12 @@ class _ApplianceListScreenState extends State<ApplianceListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
       appBar: CustomAppBar(title: 'My Appliances'),
-      body: _isLoading
-          ? const LoadingIndicator(message: 'Loading appliances...')
-          : _buildAppliancesList(),
+      body: BackgroundContainer(
+        child: _isLoading
+            ? const LoadingIndicator(message: 'Loading appliances...')
+            : _buildAppliancesList(),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
@@ -76,10 +78,22 @@ class _ApplianceListScreenState extends State<ApplianceListScreen> {
 
   Widget _buildAppliancesList() {
     if (_appliances.isEmpty) {
-      return EmptyState(
-        icon: Icons.device_hub,
-        message:
-            'You haven\'t added any appliances yet. Tap the + button to add your first appliance.',
+      return Container(
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: Card(
+            color: Colors.white.withOpacity(0.85),
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: EmptyState(
+                icon: Icons.device_hub,
+                message:
+                    'You haven\'t added any appliances yet. Tap the + button to add your first appliance.',
+              ),
+            ),
+          ),
+        ),
       );
     }
 
@@ -90,8 +104,9 @@ class _ApplianceListScreenState extends State<ApplianceListScreen> {
         final appliance = _appliances[index];
 
         return Card(
-          elevation: 2,
+          elevation: 4,
           margin: const EdgeInsets.only(bottom: 16),
+          color: Colors.white.withOpacity(0.85),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

@@ -17,11 +17,19 @@ class UserModel {
            notificationPreferences ?? NotificationPreferences();
 
   factory UserModel.fromMap(Map<String, dynamic> map, String id) {
+    // Safe timestamp handling
+    DateTime userCreatedAt;
+    if (map['createdAt'] != null && map['createdAt'] is Timestamp) {
+      userCreatedAt = (map['createdAt'] as Timestamp).toDate();
+    } else {
+      userCreatedAt = DateTime.now();
+    }
+    
     return UserModel(
       id: id,
       name: map['name'] ?? '',
       email: map['email'] ?? '',
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      createdAt: userCreatedAt,
       notificationPreferences: map['notificationPreferences'] != null
           ? NotificationPreferences.fromMap(map['notificationPreferences'])
           : NotificationPreferences(),

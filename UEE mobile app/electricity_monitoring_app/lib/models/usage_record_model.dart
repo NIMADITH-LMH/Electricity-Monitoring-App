@@ -16,12 +16,28 @@ class UsageRecordModel {
   });
 
   factory UsageRecordModel.fromMap(Map<String, dynamic> map, String id) {
+    // Safe date timestamp handling
+    DateTime recordDate;
+    if (map['date'] != null && map['date'] is Timestamp) {
+      recordDate = (map['date'] as Timestamp).toDate();
+    } else {
+      recordDate = DateTime.now();
+    }
+    
+    // Safe createdAt timestamp handling
+    DateTime recordCreatedAt;
+    if (map['createdAt'] != null && map['createdAt'] is Timestamp) {
+      recordCreatedAt = (map['createdAt'] as Timestamp).toDate();
+    } else {
+      recordCreatedAt = DateTime.now();
+    }
+    
     return UsageRecordModel(
       id: id,
-      date: (map['date'] as Timestamp).toDate(),
+      date: recordDate,
       totalKwh: (map['totalKwh'] ?? 0).toDouble(),
       totalCost: (map['totalCost'] ?? 0).toDouble(),
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      createdAt: recordCreatedAt,
     );
   }
 
