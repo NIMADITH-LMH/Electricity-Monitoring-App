@@ -27,13 +27,21 @@ class ApplianceModel {
   double get annualConsumption => dailyConsumption * 365;
 
   factory ApplianceModel.fromMap(Map<String, dynamic> map, String id) {
+    // Safe timestamp handling
+    DateTime applianceCreatedAt;
+    if (map['createdAt'] != null && map['createdAt'] is Timestamp) {
+      applianceCreatedAt = (map['createdAt'] as Timestamp).toDate();
+    } else {
+      applianceCreatedAt = DateTime.now();
+    }
+    
     return ApplianceModel(
       id: id,
       name: map['name'] ?? '',
       wattage: (map['wattage'] ?? 0).toDouble(),
       dailyUsageHrs: (map['dailyUsageHrs'] ?? 0).toDouble(),
       location: map['location'] ?? '',
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      createdAt: applianceCreatedAt,
     );
   }
 

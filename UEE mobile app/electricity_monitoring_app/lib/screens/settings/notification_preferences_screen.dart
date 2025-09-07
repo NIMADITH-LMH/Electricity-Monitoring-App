@@ -9,6 +9,8 @@ import 'package:electricity_monitoring_app/theme/app_colors.dart';
 class NotificationPreferencesScreen extends StatefulWidget {
   static const routeName = '/notification-preferences';
 
+  const NotificationPreferencesScreen({super.key});
+
   @override
   _NotificationPreferencesScreenState createState() =>
       _NotificationPreferencesScreenState();

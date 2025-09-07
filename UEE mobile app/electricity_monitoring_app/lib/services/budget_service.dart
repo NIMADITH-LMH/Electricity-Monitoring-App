@@ -13,27 +13,26 @@ class BudgetService extends ChangeNotifier {
   BudgetService() {
     _auth.authStateChanges().listen((user) {
       if (user != null) {
-        debugPrint('Auth state changed, fetching budgets');
-        fetchBudgets();
+        debugPrint('Auth state changed, loading budgets');
+        _loadBudgets();
       } else {
         _budgets = [];
         notifyListeners();
       }
     });
-    // Fetch on init
-    fetchBudgets();
+    // Load on init
+    _loadBudgets();
   }
-
-  // Getters
-  List<BudgetModel> get budgets => _budgets;
-
-  // Get user budgets from Firestore
-  Future<List<BudgetModel>> fetchBudgets() async {
+  
+  // Internal method to load budgets
+  Future<void> _loadBudgets() async {
     try {
-      debugPrint('Fetching budgets for user: ${_auth.currentUser?.uid}');
+      debugPrint('Loading budgets for user: ${_auth.currentUser?.uid}');
       if (_auth.currentUser == null) {
         debugPrint('No authenticated user, returning empty budget list');
-        return [];
+        _budgets = [];
+        notifyListeners();
+        return;
       }
 
       final snapshot = await _firestore
@@ -43,26 +42,104 @@ class BudgetService extends ChangeNotifier {
           .orderBy('month', descending: true)
           .get();
 
-      debugPrint('Fetched ${snapshot.docs.length} budget documents');
+      debugPrint('Loaded ${snapshot.docs.length} budget documents');
       _budgets = snapshot.docs
           .map((doc) => BudgetModel.fromMap(doc.data(), doc.id))
           .toList();
-
-      // Debug print each budget
-      for (final budget in _budgets) {
-        debugPrint(
-          'Budget: ${budget.month}, maxKwh: ${budget.maxKwh}, maxCost: ${budget.maxCost}',
-        );
-      }
-
+      
       notifyListeners();
-      return _budgets;
     } catch (e) {
-      debugPrint('Error fetching budgets: $e');
-      return [];
+      debugPrint('Error loading budgets: $e');
     }
   }
+  
+  // Public method to fetch budgets, for backward compatibility with existing code
+  Future<void> fetchBudgets() async {
+    return _loadBudgets();
+  }
 
+  // Getters
+  List<BudgetModel> get budgets => _budgets;
+  
+  // Get budget as a stream for more efficient updates
+  Stream<BudgetModel?> getBudgetStream() {
+    if (_auth.currentUser == null) {
+      return Stream.value(null);
+    }
+    
+    // Return a stream that will emit the current month's budget
+    return _firestore
+      .collection('users')
+      .doc(_auth.currentUser!.uid)
+      .collection('budgets')
+      .orderBy('month', descending: true)
+      .snapshots()
+      .map((snapshot) {
+        if (snapshot.docs.isEmpty) return null;
+        
+        // Get current month in format YYYY-MM
+        final now = DateTime.now();
+        final currentMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+        
+        // Try to find current month budget
+        try {
+          final currentBudgetDoc = snapshot.docs.firstWhere(
+            (doc) => doc.data()['month'] == currentMonth
+          );
+          return BudgetModel.fromMap(currentBudgetDoc.data(), currentBudgetDoc.id);
+        } catch (e) {
+          // Try fallback to previous month
+          try {
+            final previousMonth = DateTime(now.year, now.month - 1);
+            final previousMonthFormatted = 
+                '${previousMonth.year}-${previousMonth.month.toString().padLeft(2, '0')}';
+            
+            final fallbackBudgetDoc = snapshot.docs.firstWhere(
+              (doc) => doc.data()['month'] == previousMonthFormatted
+            );
+            return BudgetModel.fromMap(fallbackBudgetDoc.data(), fallbackBudgetDoc.id);
+          } catch (e) {
+            // No fallback available, create a default budget
+            return BudgetModel(
+              id: 'default-${currentMonth}',
+              month: currentMonth,
+              maxKwh: 150.0, // default values
+              maxCost: 500.0,
+              createdAt: DateTime.now(),
+            );
+          }
+        }
+      });
+  }
+
+  // Get budget for specific month
+  BudgetModel? getBudgetForMonth(String month) {
+    try {
+      debugPrint('Looking for budget for month: $month');
+      debugPrint('Available budgets: ${_budgets.map((b) => b.month).toList()}');
+
+      if (_budgets.isEmpty) {
+        debugPrint('No budgets available');
+        return null;
+      }
+
+      // Changed from firstWhere with exception to try/catch with direct find
+      for (final budget in _budgets) {
+        if (budget.month == month) {
+          debugPrint('Found budget: ${budget.toMap()}');
+          return budget;
+        }
+      }
+      
+      // If we get here, no budget was found
+      debugPrint('Budget not found for month: $month');
+      return null;
+    } catch (e) {
+      debugPrint('Error getting budget for month $month: $e');
+      return null;
+    }
+  }
+  
   // Add new budget
   Future<BudgetModel?> addBudget({
     required String month,
@@ -104,9 +181,9 @@ class BudgetService extends ChangeNotifier {
       _budgets.insert(0, newBudget);
       debugPrint('Added new budget: ${newBudget.toString()}');
 
-      // Re-fetch budgets to ensure we have all the latest data
-      fetchBudgets();
-      notifyListeners();
+      // Re-load budgets to ensure we have all the latest data
+      _loadBudgets();
+      
       return newBudget;
     } catch (e) {
       debugPrint('Error adding budget: $e');
@@ -141,12 +218,12 @@ class BudgetService extends ChangeNotifier {
           maxCost: maxCost,
           createdAt: _budgets[index].createdAt,
         );
+        
         _budgets[index] = updatedBudget;
         debugPrint('Updated budget: ${updatedBudget.toString()}');
 
-        // Re-fetch budgets to ensure we have all the latest data
-        fetchBudgets();
-        notifyListeners();
+        // Re-load budgets to ensure we have all the latest data
+        _loadBudgets();
       }
 
       return true;
@@ -179,36 +256,60 @@ class BudgetService extends ChangeNotifier {
     }
   }
 
-  // Get budget for specific month
-  BudgetModel? getBudgetForMonth(String month) {
-    try {
-      debugPrint('Looking for budget for month: $month');
-      debugPrint('Available budgets: ${_budgets.map((b) => b.month).toList()}');
-
-      if (_budgets.isEmpty) {
-        debugPrint('No budgets available');
-        return null;
-      }
-
-      final budget = _budgets.firstWhere(
-        (budget) => budget.month == month,
-        orElse: () => throw Exception('Budget not found for month: $month'),
-      );
-
-      debugPrint('Found budget: ${budget.toMap()}');
-      return budget;
-    } catch (e) {
-      debugPrint('Error getting budget for month $month: $e');
-      return null;
-    }
-  }
-
-  // Get current month's budget
-  BudgetModel? getCurrentMonthBudget() {
+  // Get current month's budget with fallback mechanisms (legacy method)
+  BudgetModel getCurrentMonthBudget() {
     final now = DateTime.now();
     final currentMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-    final budget = getBudgetForMonth(currentMonth);
-    debugPrint('getCurrentMonthBudget for $currentMonth: ${budget?.toMap()}');
-    return budget;
+    
+    try {
+      debugPrint('Looking for budget for month: $currentMonth');
+      debugPrint('Available budgets: ${_budgets.map((b) => b.month).toList()}');
+      
+      // First try the exact month match
+      BudgetModel? budget = getBudgetForMonth(currentMonth);
+      
+      // If not found, try fallback to previous month
+      if (budget == null) {
+        final previousMonth = DateTime(now.year, now.month - 1);
+        final previousMonthFormatted = '${previousMonth.year}-${previousMonth.month.toString().padLeft(2, '0')}';
+        debugPrint('Current month budget not found, trying previous month: $previousMonthFormatted');
+        
+        budget = getBudgetForMonth(previousMonthFormatted);
+        if (budget != null) {
+          // Create a new budget for current month based on previous month's data
+          debugPrint('Using previous month budget as fallback: $previousMonthFormatted');
+          budget = BudgetModel(
+            id: 'fallback-${currentMonth}',
+            month: currentMonth, // Use current month in UI
+            maxKwh: budget.maxKwh,
+            maxCost: budget.maxCost,
+            createdAt: DateTime.now(),
+          );
+          debugPrint('Created fallback budget for current month: ${budget.toMap()}');
+        } else {
+          // If still not found, create a default budget object
+          debugPrint('No budget found, using default values');
+          budget = BudgetModel(
+            id: 'default-${currentMonth}',
+            month: currentMonth,
+            maxKwh: 150.0, // default values
+            maxCost: 500.0,
+            createdAt: DateTime.now(),
+          );
+        }
+      }
+      
+      debugPrint('Returning budget: ${budget.toMap()}');
+      return budget;
+    } catch (e) {
+      debugPrint('Error getting budget with fallback: $e');
+      return BudgetModel(
+        id: 'default-${currentMonth}',
+        month: currentMonth,
+        maxKwh: 150.0, // default values
+        maxCost: 500.0,
+        createdAt: DateTime.now(),
+      );
+    }
   }
 }

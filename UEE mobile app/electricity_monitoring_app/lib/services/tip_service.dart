@@ -204,9 +204,30 @@ class TipService extends ChangeNotifier {
           .where('userId', isEqualTo: userId)
           .get();
 
-      return querySnapshot.docs
-          .map((doc) => UserTipModel.fromMap(doc.data(), doc.id))
-          .toList();
+      List<UserTipModel> results = [];
+      
+      for (var doc in querySnapshot.docs) {
+        try {
+          final data = doc.data();
+          
+          // Safe timestamp handling for debugging
+          final lastUpdatedAt = data['lastUpdatedAt'];
+          if (lastUpdatedAt != null && lastUpdatedAt is Timestamp) {
+            final dateTime = lastUpdatedAt.toDate();
+            debugPrint('Tip interaction timestamp: $dateTime for doc ${doc.id}');
+          } else {
+            debugPrint('Warning: lastUpdatedAt field is null or not a Timestamp for doc ${doc.id}');
+          }
+          
+          // Use our safer fromMap method that has null safety built in
+          results.add(UserTipModel.fromMap(data, doc.id));
+        } catch (docError) {
+          debugPrint('Error processing document ${doc.id}: $docError');
+          // Continue processing other documents
+        }
+      }
+      
+      return results;
     } catch (e) {
       debugPrint('Error getting user tip interactions: $e');
       return [];
@@ -376,7 +397,7 @@ class TipService extends ChangeNotifier {
         if (recentUsage >
             user.notificationPreferences.usageThresholds['daily']!) {
           // For high usage users, prioritize tips with higher potential savings
-          relevanceScore += (tip.potentialSavingsKwh ?? 0) / 10; // Normalize
+          relevanceScore += tip.potentialSavingsKwh / 10; // Normalize
         }
 
         // Add to scored tips

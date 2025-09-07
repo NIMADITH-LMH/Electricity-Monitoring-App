@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:electricity_monitoring_app/models/notification_model.dart';
 import 'package:electricity_monitoring_app/models/user_model.dart';
 import 'package:electricity_monitoring_app/models/tip_model.dart';
-import 'package:electricity_monitoring_app/models/user_tip_model.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();

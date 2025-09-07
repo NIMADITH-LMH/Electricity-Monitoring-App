@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../services/user_profile_service.dart';
 import '../../services/budget_service.dart';
 import '../../models/user_model.dart';
+import '../../utils/card_theme_helper.dart';
+import '../../widgets/background_container.dart';
 import '../budget/budget_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -95,9 +97,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
+      body: BackgroundContainer(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 // Profile section
@@ -238,6 +241,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(height: 1),
                       _buildBudgetTile(),
                       const Divider(height: 1),
+                      _buildBudgetPlanTile(),
+                      const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.tune, color: Colors.blue),
                         title: const Text('Advanced Notification Settings'),
@@ -322,6 +327,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
+      ),
     );
   }
 
@@ -537,6 +543,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Navigator.pushNamed(context, BudgetScreen.routeName);
           },
         );
+      },
+    );
+  }
+  
+  Widget _buildBudgetPlanTile() {
+    return ListTile(
+      leading: Icon(
+        Icons.shopping_bag_outlined,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      title: const Text('Budget Plans'),
+      subtitle: const Text('Select or customize your budget plan'),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: () {
+        Navigator.pushNamed(context, '/budget-plan-selection');
       },
     );
   }

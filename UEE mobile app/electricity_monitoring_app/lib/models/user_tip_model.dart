@@ -19,9 +19,22 @@ class UserTipModel {
     this.implemented = false,
     this.resultEffectiveness,
     DateTime? lastUpdatedAt,
-  }) : this.lastUpdatedAt = lastUpdatedAt ?? DateTime.now();
+  }) : lastUpdatedAt = lastUpdatedAt ?? DateTime.now();
 
   factory UserTipModel.fromMap(Map<String, dynamic> map, String id) {
+    // Safe timestamp handling with fallback
+    DateTime lastUpdatedTime;
+    if (map['lastUpdatedAt'] != null) {
+      if (map['lastUpdatedAt'] is Timestamp) {
+        lastUpdatedTime = (map['lastUpdatedAt'] as Timestamp).toDate();
+      } else {
+        // Handle case where it might be another type
+        lastUpdatedTime = DateTime.now();
+      }
+    } else {
+      lastUpdatedTime = DateTime.now();
+    }
+    
     return UserTipModel(
       id: id,
       userId: map['userId'] ?? '',
@@ -30,7 +43,7 @@ class UserTipModel {
       dismissed: map['dismissed'] ?? false,
       implemented: map['implemented'] ?? false,
       resultEffectiveness: map['resultEffectiveness']?.toDouble(),
-      lastUpdatedAt: (map['lastUpdatedAt'] as Timestamp).toDate(),
+      lastUpdatedAt: lastUpdatedTime,
     );
   }
 

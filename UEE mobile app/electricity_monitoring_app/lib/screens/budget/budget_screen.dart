@@ -5,9 +5,11 @@ import 'package:intl/intl.dart';
 import '../../models/budget_model.dart';
 import '../../services/budget_service.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/card_theme_helper.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../widgets/background_container.dart';
 
 class BudgetScreen extends StatefulWidget {
   static const routeName = '/budget';
@@ -47,12 +49,20 @@ class _BudgetScreenState extends State<BudgetScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      appBar: const CustomAppBar(
+      appBar: CustomAppBar(
         title: 'Budget Management',
         showBackButton: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.upgrade, color: AppTheme.secondaryColor),
+            tooltip: 'Select Budget Plan',
+            onPressed: () => Navigator.pushNamed(context, '/budget-plan-selection'),
+          ),
+        ],
       ),
-      body: _buildBody(),
+      body: BackgroundContainer(
+        child: _buildBody(),
+      ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.secondaryColor,
         onPressed: () => _showAddEditBudgetDialog(),
@@ -61,30 +71,82 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
+  // Fetch budget data asynchronously
+  Future<Map<String, dynamic>> _fetchBudgetData() async {
+    final budgetService = Provider.of<BudgetService>(context, listen: false);
+    
+    // Get current budgets list
+    final budgets = budgetService.budgets;
+    
+    // Get current month's budget
+    final currentBudget = budgetService.getCurrentMonthBudget();
+    
+    // Get previous budgets, filtering out the current one
+    List<BudgetModel> previousBudgets = [];
+    if (currentBudget != null) {
+      previousBudgets = budgets.where((b) => b.id != currentBudget.id).toList();
+    } else {
+      previousBudgets = List.from(budgets);
+    }
+    
+    return {
+      'budgets': budgets,
+      'currentBudget': currentBudget,
+      'previousBudgets': previousBudgets,
+    };
+  }
+
   Widget _buildBody() {
     return Consumer<BudgetService>(
       builder: (context, budgetService, child) {
         if (_isLoading) {
           return const LoadingIndicator(message: 'Loading budget data...');
         }
+        
+        return FutureBuilder<Map<String, dynamic>>(
+          // Avoid recreating the future on each rebuild
+          future: _fetchBudgetData(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const LoadingIndicator(message: 'Processing budget data...');
+            }
+            
+            if (snapshot.hasError) {
+              debugPrint('Error loading budget data: ${snapshot.error}');
+              return Center(
+                child: Text('Error loading budget data: ${snapshot.error}'),
+              );
+            }
+            
+            final data = snapshot.data!;
+            final budgets = data['budgets'] as List<BudgetModel>;
+            final currentBudget = data['currentBudget'] as BudgetModel?;
+            final previousBudgets = data['previousBudgets'] as List<BudgetModel>;
+            
+            if (budgets.isEmpty) {
+              return Center(
+                child: Card(
+                  color: Colors.white.withOpacity(0.85),
+                  elevation: 4,
+                  margin: const EdgeInsets.all(16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: EmptyState(
+                      icon: Icons.account_balance_wallet,
+                      message:
+                          'No budget set yet. Create your first budget to start tracking electricity expenses.',
+                      buttonText: 'Create Budget',
+                      onButtonPressed: _showAddEditBudgetDialog,
+                    ),
+                  ),
+                ),
+              );
+            }
 
-        final budgets = budgetService.budgets;
-        final currentBudget = budgetService.getCurrentMonthBudget();
-        final previousBudgets = budgets
-            .where((b) => b.id != (currentBudget?.id ?? ''))
-            .toList();
-
-        if (budgets.isEmpty) {
-          return EmptyState(
-            icon: Icons.account_balance_wallet,
-            message:
-                'No budget set yet. Create your first budget to start tracking electricity expenses.',
-            buttonText: 'Create Budget',
-            onButtonPressed: _showAddEditBudgetDialog,
-          );
-        }
-
-        return RefreshIndicator(
+            return RefreshIndicator(
           onRefresh: _loadBudgets,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -98,13 +160,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   const SizedBox(height: 24),
                 ],
                 if (previousBudgets.isNotEmpty) ...[
-                  const Text(
+                  Text(
                     'Previous Budgets',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textColor,
-                    ),
+                    style: CardThemeHelper.getHeadingStyle(),
                   ),
                   const SizedBox(height: 16),
                   ListView.builder(
@@ -119,6 +177,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ],
             ),
           ),
+        );
+          },
         );
       },
     );
@@ -158,20 +218,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Current Budget',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textColor,
-                  ),
+                  style: CardThemeHelper.getHeadingStyle().copyWith(color: AppTheme.textColor),
                 ),
                 Text(
                   '$monthName $year',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.lightTextColor,
-                  ),
+                  style: CardThemeHelper.getBodyTextStyle().copyWith(color: AppTheme.lightTextColor),
                 ),
               ],
             ),

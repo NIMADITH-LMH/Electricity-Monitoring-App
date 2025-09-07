@@ -16,12 +16,20 @@ class BudgetModel {
   });
 
   factory BudgetModel.fromMap(Map<String, dynamic> map, String id) {
+    // Safe timestamp handling
+    DateTime createdDateTime;
+    if (map['createdAt'] != null && map['createdAt'] is Timestamp) {
+      createdDateTime = (map['createdAt'] as Timestamp).toDate();
+    } else {
+      createdDateTime = DateTime.now();
+    }
+    
     return BudgetModel(
       id: id,
       month: map['month'] ?? '',
       maxKwh: (map['maxKwh'] ?? 0).toDouble(),
       maxCost: (map['maxCost'] ?? 0).toDouble(),
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      createdAt: createdDateTime,
     );
   }
 

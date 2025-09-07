@@ -23,15 +23,23 @@ class TipModel {
     Map<String, dynamic>? relevanceFactors,
     this.difficulty = 'medium',
     this.potentialSavingsKwh = 0.0,
-  }) : this.relevanceFactors = relevanceFactors ?? {};
+  }) : relevanceFactors = relevanceFactors ?? {};
 
   factory TipModel.fromMap(Map<String, dynamic> map, String id) {
+    // Safe timestamp handling
+    DateTime tipCreatedAt;
+    if (map['createdAt'] != null && map['createdAt'] is Timestamp) {
+      tipCreatedAt = (map['createdAt'] as Timestamp).toDate();
+    } else {
+      tipCreatedAt = DateTime.now();
+    }
+    
     return TipModel(
       id: id,
       title: map['title'] ?? '',
       description: map['description'] ?? '',
       createdBy: map['createdBy'] ?? '',
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      createdAt: tipCreatedAt,
       category: map['category'],
       estimatedSavings: map['estimatedSavings']?.toDouble(),
       relevanceFactors: Map<String, dynamic>.from(

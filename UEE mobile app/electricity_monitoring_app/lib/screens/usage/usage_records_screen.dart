@@ -23,15 +23,13 @@ class UsageRecordsScreen extends StatefulWidget {
 
 class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
   bool _isLoading = false;
-  String? _selectedMonth;
-  String? _selectedAppliance;
+  String _selectedMonth = "all";
+  // Removed _selectedAppliance variable since it's not currently used
 
   @override
   void initState() {
     super.initState();
-    // Set default month to current month
-    final now = DateTime.now();
-    _selectedMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    // We now use "all" as the default for both month and appliance
   }
 
   @override
@@ -56,7 +54,7 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
         }
 
         final allRecords = usageService.usageRecords;
-        final appliances = applianceService.appliances;
+        // Removed the unused appliances variable
 
         if (allRecords.isEmpty) {
           return EmptyState(
@@ -99,10 +97,10 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.calendar_month),
                     ),
-                    value: _selectedMonth,
+                    value: _validateSelectedMonth(months),
                     items: [
-                      const DropdownMenuItem(
-                        value: null,
+                      const DropdownMenuItem<String>(
+                        value: "all",
                         child: Text('All Months'),
                       ),
                       ...months.map((month) {
@@ -120,38 +118,14 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
                     ],
                     onChanged: (value) {
                       setState(() {
-                        _selectedMonth = value;
+                        _selectedMonth = value ?? "all";
                       });
                     },
                   ),
                   const SizedBox(height: 12),
 
-                  // Appliance filter
-                  DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      labelText: 'Select Appliance',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.devices),
-                    ),
-                    value: _selectedAppliance,
-                    items: [
-                      const DropdownMenuItem(
-                        value: null,
-                        child: Text('All Appliances'),
-                      ),
-                      ...appliances.map(
-                        (appliance) => DropdownMenuItem(
-                          value: appliance.id,
-                          child: Text(appliance.name),
-                        ),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedAppliance = value;
-                      });
-                    },
-                  ),
+                  // We've temporarily disabled the appliance filter since the UsageRecordModel doesn't have applianceId
+                  // Just show the month filter for now
                 ],
               ),
             ),
@@ -219,23 +193,37 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
     }
     return months.toList()..sort((a, b) => b.compareTo(a)); // Sort desc
   }
+  
+  // Helper method to ensure selected month is valid
+  String _validateSelectedMonth(List<String> availableMonths) {
+    // If selectedMonth is "all", that's always valid
+    if (_selectedMonth == "all") {
+      return _selectedMonth;
+    }
+    
+    // Check if the currently selected month is in the available months
+    if (availableMonths.contains(_selectedMonth)) {
+      return _selectedMonth;
+    }
+    
+    // If not, default to "all"
+    return "all";
+  }
 
   List<UsageRecordModel> _filterRecords(List<UsageRecordModel> records) {
-    if (_selectedMonth == null && _selectedAppliance == null) {
+    // For now, we're only filtering by month since the UsageRecordModel doesn't have an applianceId field
+    if (_selectedMonth == "all") {
       return records;
     }
 
     return records.where((record) {
       // Filter by month
       final monthMatch =
-          _selectedMonth == null ||
+          _selectedMonth == "all" ||
           (_selectedMonth ==
               '${record.date.year}-${record.date.month.toString().padLeft(2, '0')}');
 
-      // Filter by appliance (disabled since we're filtering by date instead)
-      final applianceMatch = true;
-
-      return monthMatch && applianceMatch;
+      return monthMatch;
     }).toList();
   }
 
@@ -957,9 +945,9 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
   }
 
   void _generateMonthlyReport() async {
-    if (_selectedMonth == null) {
+    if (_selectedMonth == "all") {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a month first')),
+        const SnackBar(content: Text('Please select a specific month first')),
       );
       return;
     }
@@ -976,7 +964,7 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
       final budgetService = Provider.of<BudgetService>(context, listen: false);
 
       // Get month and year from selected month
-      final dateParts = _selectedMonth!.split('-');
+      final dateParts = _selectedMonth.split('-');
       final year = int.parse(dateParts[0]);
       final month = int.parse(dateParts[1]);
 
@@ -992,7 +980,7 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
       final totalCost = usageService.getTotalCostForMonth(year, month);
 
       // Get budget for the month
-      final budget = budgetService.getBudgetForMonth(_selectedMonth!);
+      final budget = budgetService.getBudgetForMonth(_selectedMonth);
 
       // Generate the report using the new method
       final filePath = await ReportService.generateReport(

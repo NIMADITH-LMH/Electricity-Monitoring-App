@@ -153,7 +153,7 @@ class UsageReminderService extends ChangeNotifier {
       final currentWeekEnd = currentWeekStart.add(Duration(days: 6));
 
       // Get total kWh for the current week
-      final weeklyUsage = await _usageRecordService.getTotalKwhForDateRange(
+      final weeklyUsage = _usageRecordService.getTotalKwhForDateRange(
         currentWeekStart,
         currentWeekEnd,
       );

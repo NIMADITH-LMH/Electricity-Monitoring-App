@@ -103,15 +103,21 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/login background.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 // App logo and title
                 const Icon(
                   Icons.electric_bolt,
@@ -119,22 +125,36 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: AppTheme.primaryColor,
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Electricity Monitor',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.textColor,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        blurRadius: 4.0,
+                        color: Colors.black.withOpacity(0.5),
+                        offset: const Offset(1, 1),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Sign in to continue',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    color: AppTheme.lightTextColor,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        blurRadius: 2.0,
+                        color: Colors.black.withOpacity(0.3),
+                        offset: const Offset(1, 1),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -258,9 +278,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
+                          Text(
                             'Don\'t have an account? ',
-                            style: TextStyle(color: AppTheme.lightTextColor),
+                            style: TextStyle(
+                              color: Colors.white,
+                              shadows: [
+                                Shadow(
+                                  blurRadius: 2.0,
+                                  color: Colors.black.withOpacity(0.3),
+                                  offset: const Offset(1, 1),
+                                ),
+                              ],
+                            ),
                           ),
                           GestureDetector(
                             onTap: () {
@@ -270,11 +299,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               );
                             },
-                            child: const Text(
+                            child: Text(
                               'Sign Up',
                               style: TextStyle(
-                                color: AppTheme.secondaryColor,
+                                color: Colors.white,
                                 fontWeight: FontWeight.bold,
+                                shadows: [
+                                  Shadow(
+                                    blurRadius: 2.0,
+                                    color: Colors.black.withOpacity(0.5),
+                                    offset: const Offset(1, 1),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -288,6 +324,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 }
