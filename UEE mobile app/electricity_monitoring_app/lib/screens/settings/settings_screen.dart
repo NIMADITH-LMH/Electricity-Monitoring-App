@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../../services/user_profile_service.dart';
 import '../../services/budget_service.dart';
 import '../../models/user_model.dart';
-import '../../utils/card_theme_helper.dart';
 import '../../widgets/background_container.dart';
 import '../budget/budget_screen.dart';
+import '../badges/streak_and_badges_page.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -243,6 +244,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(height: 1),
                       _buildBudgetPlanTile(),
                       const Divider(height: 1),
+                      _buildStreakAndBadgesTile(),
+                      const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.tune, color: Colors.blue),
                         title: const Text('Advanced Notification Settings'),
@@ -301,6 +304,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(height: 1),
                       ListTile(
                         leading: Icon(
+                          Icons.notifications_active,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        title: const Text('Test Usage Notifications'),
+                        subtitle: const Text('Try the multi-level usage alert system'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.of(context).pushNamed('/usage-notification-test');
+                        },
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: Icon(
                           Icons.help_outline,
                           color: Theme.of(context).colorScheme.primary,
                         ),
@@ -320,6 +336,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () {
                           _showPrivacyPolicyDialog(context);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Only show developer tools section in debug mode
+                if (!kReleaseMode)
+                const SizedBox(height: 24),
+                
+                // Developer Tools section
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Icon(
+                          Icons.developer_mode,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        title: const Text('Developer Tools'),
+                        subtitle: const Text('Testing utilities'),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: Icon(
+                          Icons.notifications_active,
+                          color: Colors.orange,
+                        ),
+                        title: const Text('Test Usage Notifications'),
+                        subtitle: const Text('Try out the notification system'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.of(context).pushNamed('/usage-notification-test');
                         },
                       ),
                     ],
@@ -558,6 +611,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
       onTap: () {
         Navigator.pushNamed(context, '/budget-plan-selection');
+      },
+    );
+  }
+  
+  Widget _buildStreakAndBadgesTile() {
+    return ListTile(
+      leading: Icon(
+        Icons.emoji_events,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      title: const Text('Streaks & Badges'),
+      subtitle: const Text('View your achievements and daily streaks'),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: () {
+        Navigator.pushNamed(context, StreakAndBadgesPage.routeName);
       },
     );
   }

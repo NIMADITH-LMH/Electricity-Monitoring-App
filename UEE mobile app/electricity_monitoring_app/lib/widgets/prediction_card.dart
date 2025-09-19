@@ -7,9 +7,9 @@ class PredictionCard extends StatelessWidget {
   final UsagePredictionModel prediction;
 
   const PredictionCard({
-    Key? key,
+    super.key,
     required this.prediction,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +89,7 @@ class PredictionCard extends StatelessWidget {
                 Expanded(
                   child: _buildMetricCard(
                     title: 'Predicted Usage',
-                    value: '${prediction.predictedKwh.toStringAsFixed(1)}',
+                    value: prediction.predictedKwh.toStringAsFixed(1),
                     unit: 'kWh',
                     icon: Icons.bolt,
                     iconColor: AppTheme.accentColor,

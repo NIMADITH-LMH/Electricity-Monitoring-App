@@ -149,10 +149,10 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
             const SizedBox(height: 4), // Already reduced
             // Tab views
             SizedBox(
-              height:
-                  215, // Increased from 190 to accommodate the content better
+              height: 380, // Further adjusted to ensure proper display in all tabs
               child: TabBarView(
                 controller: _tabController,
+                physics: ClampingScrollPhysics(), // Prevents overscroll
                 children: [
                   _buildUsageChartTab(),
                   _buildCostChartTab(),
@@ -559,71 +559,86 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
     final breakdown = _dailyBreakdown!;
 
     return Padding(
-      padding: const EdgeInsets.only(top: 4.0), // Further reduced from 8.0
+      padding: const EdgeInsets.only(top: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Daily Usage Breakdown',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.purple[50],
-                  borderRadius: BorderRadius.circular(8),
+          // Header section with more padding
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Daily Usage Breakdown',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                child: Text(
-                  'Peak: ${breakdown.peakUsageTime}',
-                  style: TextStyle(
-                    color: Colors.purple[800],
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10,
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.purple[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Peak: ${breakdown.peakUsageTime}',
+                    style: TextStyle(
+                      color: Colors.purple[800],
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 4), // Further reduced from 8
+          // Content with better spacing
           Expanded(
             child: Column(
               children: [
-                // Pie chart for usage breakdown with reduced size
-                Expanded(flex: 1, child: _buildPieChart()),
+                // Pie chart with proper constraints
+                Container(
+                  height: 180, // Fixed height to prevent overflow
+                  child: _buildPieChart(),
+                ),
+                // Legend and details with padding
                 // Legend and details
                 Expanded(
-                  flex: 5, // Further increased from 4
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min, // Added to minimize column size
-                    children: [
-                      _buildBreakdownRow(
-                        'Morning',
-                        breakdown.morningUsage,
-                        breakdown.morningPercentage,
-                        Colors.blue[400]!,
-                      ),
-                      _buildBreakdownRow(
-                        'Afternoon',
-                        breakdown.afternoonUsage,
-                        breakdown.afternoonPercentage,
-                        Colors.amber[400]!,
-                      ),
-                      _buildBreakdownRow(
-                        'Evening',
-                        breakdown.eveningUsage,
-                        breakdown.eveningPercentage,
-                        Colors.purple[400]!,
-                      ),
-                      _buildBreakdownRow(
-                        'Night',
-                        breakdown.nightUsage,
-                        breakdown.nightPercentage,
-                        Colors.grey[700]!,
-                      ),
-                    ],
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 8.0),
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListView(
+                      padding: EdgeInsets.zero,
+                      children: [
+                        _buildBreakdownRow(
+                          'Morning',
+                          breakdown.morningUsage,
+                          breakdown.morningPercentage,
+                          Colors.blue[400]!,
+                        ),
+                        _buildBreakdownRow(
+                          'Afternoon',
+                          breakdown.afternoonUsage,
+                          breakdown.afternoonPercentage,
+                          Colors.amber[400]!,
+                        ),
+                        _buildBreakdownRow(
+                          'Evening',
+                          breakdown.eveningUsage,
+                          breakdown.eveningPercentage,
+                          Colors.purple[400]!,
+                        ),
+                        _buildBreakdownRow(
+                          'Night',
+                          breakdown.nightUsage,
+                          breakdown.nightPercentage,
+                          Colors.grey[700]!,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -640,54 +655,60 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
     double percentage,
     Color color,
   ) {
-    return Row(
-      mainAxisSize: MainAxisSize.min, // Added to ensure row takes minimum space
-      children: [
-        Container(
-          width: 4, // Further reduced from 5
-          height: 4, // Further reduced from 5
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 1), // Minimum spacing
-        Expanded(
-          flex: 3, // Increased from 2
-          child: Text(
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 3.0),
+      child: Row(
+        children: [
+          // Color indicator
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          
+          // Time period label
+          Text(
             label,
-            textScaleFactor: 0.85, // Further reduced scale factor
-            maxLines: 1, // Ensure single line
             style: TextStyle(
-              fontSize: 9, // Further reduced font size
-              overflow: TextOverflow.ellipsis,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
-        ),
-        Expanded(
-          flex: 2, // Increased from 1
-          child: Text(
+          
+          const Spacer(),
+          
+          // Usage value
+          Text(
             '${usage.toStringAsFixed(1)} kWh',
-            textScaleFactor: 0.85, // Further reduced scale factor
-            maxLines: 1, // Ensure single line
             style: TextStyle(
-              fontWeight: FontWeight.w500, // Less bold
-              fontSize: 8, // Further reduced font size
-              overflow: TextOverflow.ellipsis,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
-        ),
-        Expanded(
-          flex: 1, // Same flex
-          child: Text(
-            '${percentage.toStringAsFixed(0)}%',
-            textAlign: TextAlign.right,
-            textScaleFactor: 0.85, // Further reduced scale factor
-            maxLines: 1, // Ensure single line
-            style: TextStyle(
-              fontSize: 8, // Further reduced font size
-              overflow: TextOverflow.ellipsis,
+          
+          const SizedBox(width: 8),
+          
+          // Percentage badge
+          Container(
+            width: 38,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '${percentage.toStringAsFixed(0)}%',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: color.withOpacity(0.8),
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -813,56 +834,75 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
       return Center(child: Text('No data available'));
     }
 
+    // Calculate radius based on container size (not full screen width)
+    final radius = 80.0; // Fixed size for consistent display
+
     final breakdown = _dailyBreakdown!;
     final sections = [
       PieChartSectionData(
         value: breakdown.morningUsage,
         title: '${breakdown.morningPercentage.toInt()}%',
         color: Colors.blue[400],
-        radius: 60, // Further reduced from 70
+        radius: radius,
         titleStyle: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
-          fontSize: 9, // Further reduced from 10
+          fontSize: 12,
         ),
+        showTitle: breakdown.morningPercentage >= 10, // Only show title if percentage is large enough
       ),
       PieChartSectionData(
         value: breakdown.afternoonUsage,
         title: '${breakdown.afternoonPercentage.toInt()}%',
         color: Colors.amber[400],
-        radius: 60, // Further reduced from 70
+        radius: radius,
         titleStyle: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
-          fontSize: 9, // Further reduced from 10
+          fontSize: 12,
         ),
+        showTitle: breakdown.afternoonPercentage >= 10,
       ),
       PieChartSectionData(
         value: breakdown.eveningUsage,
         title: '${breakdown.eveningPercentage.toInt()}%',
         color: Colors.purple[400],
-        radius: 60, // Further reduced from 70
+        radius: radius,
         titleStyle: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
-          fontSize: 9, // Further reduced from 10
+          fontSize: 12,
         ),
+        showTitle: breakdown.eveningPercentage >= 10,
       ),
       PieChartSectionData(
         value: breakdown.nightUsage,
         title: '${breakdown.nightPercentage.toInt()}%',
         color: Colors.grey[700],
-        radius: 60, // Further reduced from 70
+        radius: radius,
         titleStyle: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
-          fontSize: 9, // Further reduced from 10
+          fontSize: 12,
         ),
+        showTitle: breakdown.nightPercentage >= 10,
       ),
     ];
 
-    return PieChart(
-      PieChartData(sectionsSpace: 0, centerSpaceRadius: 20, sections: sections),
+    return Center(
+      child: PieChart(
+        PieChartData(
+          sectionsSpace: 0,
+          centerSpaceRadius: 25, // Fixed center space
+          sections: sections,
+          pieTouchData: PieTouchData(
+            touchCallback: (FlTouchEvent event, pieTouchResponse) {
+              // Optional: handle touch events if desired
+            },
+          ),
+        ),
+        swapAnimationDuration: Duration(milliseconds: 150),
+      ),
     );
   }
 }

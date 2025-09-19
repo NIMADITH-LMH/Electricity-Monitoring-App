@@ -10,7 +10,10 @@ import 'screens/settings/notification_preferences_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/usage/usage_analytics_screen.dart';
 import 'screens/budget/budget_plan_selection_screen.dart';
+import 'screens/badges/streak_and_badges_page.dart';
+import 'screens/test/usage_notification_test_screen.dart';
 import 'utils/app_theme.dart';
+import 'utils/background_worker.dart';
 import 'services/auth_service.dart';
 import 'services/tip_service.dart';
 import 'services/usage_record_service.dart';
@@ -20,11 +23,19 @@ import 'services/budget_plan_service.dart';
 import 'services/user_profile_service.dart';
 import 'services/usage_reminder_service.dart';
 import 'services/usage_analytics_service.dart';
+import 'services/streak_service.dart';
+import 'services/usage_notifier_service.dart';
 import 'providers/budget_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
   await Firebase.initializeApp();
+  
+  // Initialize workmanager for background tasks
+  await initializeWorkManager();
+  
   runApp(const MyApp());
 }
 
@@ -45,6 +56,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => UserProfileService()),
         ChangeNotifierProvider(create: (_) => UsageReminderService()),
         ChangeNotifierProvider(create: (_) => UsageAnalyticsService()),
+        ChangeNotifierProvider(create: (_) => StreakService()),
+        ChangeNotifierProvider(create: (_) => UsageNotifier()),
         // Create BudgetProvider with dependency on BudgetService
         ChangeNotifierProxyProvider<BudgetService, BudgetProvider>(
           create: (_) => BudgetProvider(BudgetService()),
@@ -67,6 +80,8 @@ class MyApp extends StatelessWidget {
           '/notifications': (context) => NotificationsScreen(),
           '/usage-analytics': (context) => UsageAnalyticsScreen(),
           '/budget-plan-selection': (context) => const BudgetPlanSelectionScreen(),
+          '/streak-and-badges': (context) => const StreakAndBadgesPage(),
+          '/usage-notification-test': (context) => const UsageNotificationTestScreen(),
           // We can't use routes for EditApplianceScreen because it needs an appliance parameter
         },
       ),

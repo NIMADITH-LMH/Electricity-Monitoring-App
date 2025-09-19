@@ -30,6 +30,11 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
   void initState() {
     super.initState();
     // We now use "all" as the default for both month and appliance
+    
+    // Get current month and year in YYYY-MM format to pre-select current month if available
+    final now = DateTime.now();
+    final currentMonthStr = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    _selectedMonth = currentMonthStr; // This will be validated before use
   }
 
   @override
@@ -194,7 +199,7 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
     return months.toList()..sort((a, b) => b.compareTo(a)); // Sort desc
   }
   
-  // Helper method to ensure selected month is valid
+  // Helper method to validate if the selected month exists in available months
   String _validateSelectedMonth(List<String> availableMonths) {
     // If selectedMonth is "all", that's always valid
     if (_selectedMonth == "all") {
@@ -206,7 +211,13 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
       return _selectedMonth;
     }
     
-    // If not, default to "all"
+    // If we have available months but the selected one isn't in the list,
+    // use the most recent month
+    if (availableMonths.isNotEmpty) {
+      return availableMonths.first; // Since it's sorted desc, first is most recent
+    }
+    
+    // If no months are available, default to "all"
     return "all";
   }
 
@@ -737,29 +748,44 @@ class _UsageRecordsScreenState extends State<UsageRecordsScreen> {
               });
 
               try {
+                // Get the service before any async operations
                 final usageService = Provider.of<UsageRecordService>(
-                  context,
+                  context, 
                   listen: false,
                 );
+                
+                // Perform the deletion
                 await usageService.deleteUsageRecord(record.id);
-
+                
+                // Schedule UI update for the next frame
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Record deleted successfully'),
-                      backgroundColor: AppTheme.successColor,
-                    ),
-                  );
+                  // Use a post-frame callback to ensure the widget tree is stable
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Record deleted successfully'),
+                          backgroundColor: AppTheme.successColor,
+                        ),
+                      );
+                    }
+                  });
                 }
               } catch (e) {
                 debugPrint('Error deleting record: $e');
+                
+                // Schedule error message for the next frame
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Error deleting record. Please try again.'),
-                      backgroundColor: AppTheme.errorColor,
-                    ),
-                  );
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error deleting record. Please try again.'),
+                          backgroundColor: AppTheme.errorColor,
+                        ),
+                      );
+                    }
+                  });
                 }
               } finally {
                 if (mounted) {
