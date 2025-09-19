@@ -83,12 +83,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
     
     // Get previous budgets, filtering out the current one
     List<BudgetModel> previousBudgets = [];
-    if (currentBudget != null) {
-      previousBudgets = budgets.where((b) => b.id != currentBudget.id).toList();
-    } else {
-      previousBudgets = List.from(budgets);
-    }
-    
+    previousBudgets = budgets.where((b) => b.id != currentBudget.id).toList();
+      
     return {
       'budgets': budgets,
       'currentBudget': currentBudget,
@@ -777,7 +773,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
       await Provider.of<BudgetService>(
         context,
         listen: false,
-      ).addBudget(month: month, maxKwh: maxKwh, maxCost: maxCost);
+      ).addBudget(
+        month: month, 
+        maxKwh: maxKwh, 
+        maxCost: maxCost,
+        name: "Budget for $month",
+        description: "Monthly budget for $month",
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -825,7 +827,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
       final success = await Provider.of<BudgetService>(
         context,
         listen: false,
-      ).updateBudget(id: id, month: month, maxKwh: maxKwh, maxCost: maxCost);
+      ).updateBudget(
+        id: id,
+        month: month, 
+        maxKwh: maxKwh, 
+        maxCost: maxCost,
+        name: "Budget for $month",
+        description: "Updated budget for $month",
+      );
 
       if (mounted) {
         if (success) {

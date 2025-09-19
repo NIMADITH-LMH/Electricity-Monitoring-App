@@ -58,12 +58,18 @@ class BudgetProvider extends ChangeNotifier {
     required String month,
     required double maxKwh,
     required double maxCost,
+    String? name,
+    String? description,
+    List<String>? recommendations,
   }) async {
     try {
       return await _budgetService.addBudget(
         month: month,
         maxKwh: maxKwh,
         maxCost: maxCost,
+        name: name,
+        description: description,
+        recommendations: recommendations,
       );
     } catch (e) {
       _error = e.toString();
@@ -78,6 +84,9 @@ class BudgetProvider extends ChangeNotifier {
     required String month,
     required double maxKwh,
     required double maxCost,
+    String? name,
+    String? description,
+    List<String>? recommendations,
   }) async {
     try {
       final result = await _budgetService.updateBudget(
@@ -85,6 +94,9 @@ class BudgetProvider extends ChangeNotifier {
         month: month,
         maxKwh: maxKwh,
         maxCost: maxCost,
+        name: name,
+        description: description,
+        recommendations: recommendations,
       );
       return result;
     } catch (e) {

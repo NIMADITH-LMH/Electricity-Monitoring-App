@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:isolate';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/appliance_service.dart';
@@ -17,6 +15,7 @@ import '../appliance/appliance_list_screen.dart';
 import '../budget/budget_screen.dart';
 import '../usage/usage_records_screen.dart';
 import '../tips/tips_list_screen.dart';
+import '../badges/streak_and_badges_page.dart';
 import '../../providers/budget_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -428,6 +427,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: Colors.purple,
               onTap: () {
                 Navigator.of(context).pushNamed('/usage-analytics');
+              },
+            ),
+            _buildActionCard(
+              title: 'Streaks & Badges',
+              icon: Icons.emoji_events,
+              color: Colors.amber,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const StreakAndBadgesPage(),
+                  ),
+                );
               },
             ),
           ],

@@ -96,7 +96,7 @@ class BudgetService extends ChangeNotifier {
           } catch (e) {
             // No fallback available, create a default budget
             return BudgetModel(
-              id: 'default-${currentMonth}',
+              id: 'default-$currentMonth',
               month: currentMonth,
               maxKwh: 150.0, // default values
               maxCost: 500.0,
@@ -274,7 +274,7 @@ class BudgetService extends ChangeNotifier {
           // Create a new budget for current month based on previous month's data
           debugPrint('Using previous month budget as fallback: $previousMonthFormatted');
           budget = BudgetModel(
-            id: 'fallback-${currentMonth}',
+            id: 'fallback-$currentMonth',
             month: currentMonth, // Use current month in UI
             maxKwh: budget.maxKwh,
             maxCost: budget.maxCost,
@@ -285,7 +285,7 @@ class BudgetService extends ChangeNotifier {
           // If still not found, create a default budget object
           debugPrint('No budget found, using default values');
           budget = BudgetModel(
-            id: 'default-${currentMonth}',
+            id: 'default-$currentMonth',
             month: currentMonth,
             maxKwh: 150.0, // default values
             maxCost: 500.0,
@@ -299,7 +299,7 @@ class BudgetService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error getting budget with fallback: $e');
       return BudgetModel(
-        id: 'default-${currentMonth}',
+        id: 'default-$currentMonth',
         month: currentMonth,
         maxKwh: 150.0, // default values
         maxCost: 500.0,

@@ -6,6 +6,9 @@ class BudgetModel {
   final double maxKwh;
   final double maxCost;
   final DateTime createdAt;
+  final String? name;
+  final String? description;
+  final List<String>? recommendations;
 
   BudgetModel({
     required this.id,
@@ -13,6 +16,9 @@ class BudgetModel {
     required this.maxKwh,
     required this.maxCost,
     required this.createdAt,
+    this.name,
+    this.description,
+    this.recommendations,
   });
 
   factory BudgetModel.fromMap(Map<String, dynamic> map, String id) {
@@ -24,27 +30,44 @@ class BudgetModel {
       createdDateTime = DateTime.now();
     }
     
+    // Handle recommendations array
+    List<String>? recommendations;
+    if (map['recommendations'] != null && map['recommendations'] is List) {
+      recommendations = List<String>.from(
+        (map['recommendations'] as List).map((item) => item.toString())
+      );
+    }
+    
     return BudgetModel(
       id: id,
       month: map['month'] ?? '',
       maxKwh: (map['maxKwh'] ?? 0).toDouble(),
       maxCost: (map['maxCost'] ?? 0).toDouble(),
       createdAt: createdDateTime,
+      name: map['name'],
+      description: map['description'],
+      recommendations: recommendations,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    final map = <String, dynamic>{
       'month': month,
       'maxKwh': maxKwh,
       'maxCost': maxCost,
       'createdAt': createdAt,
-      'id': id,
     };
+    
+    // Add optional fields if they exist
+    if (name != null) map['name'] = name!;
+    if (description != null) map['description'] = description!;
+    if (recommendations != null) map['recommendations'] = recommendations!;
+    
+    return map;
   }
 
   @override
   String toString() {
-    return 'BudgetModel{id: $id, month: $month, maxKwh: $maxKwh, maxCost: $maxCost}';
+    return 'BudgetModel{id: $id, month: $month, maxKwh: $maxKwh, maxCost: $maxCost, name: $name}';
   }
 }

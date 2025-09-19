@@ -69,13 +69,13 @@ class BudgetPlan {
     List<String>? recommendations,
   }) {
     return BudgetPlan(
-      id: this.id,
+      id: id,
       name: name ?? this.name,
       maxKwh: maxKwh ?? this.maxKwh,
       maxCost: maxCost ?? this.maxCost,
       description: description ?? this.description,
       recommendations: recommendations ?? this.recommendations,
-      createdAt: this.createdAt,
+      createdAt: createdAt,
     );
   }
 

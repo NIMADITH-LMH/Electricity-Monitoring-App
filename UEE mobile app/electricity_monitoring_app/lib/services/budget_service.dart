@@ -38,7 +38,7 @@ class BudgetService extends ChangeNotifier {
       final snapshot = await _firestore
           .collection('users')
           .doc(_auth.currentUser!.uid)
-          .collection('budgets')
+          .collection('budgetPlans')
           .orderBy('month', descending: true)
           .get();
 
@@ -71,7 +71,7 @@ class BudgetService extends ChangeNotifier {
     return _firestore
       .collection('users')
       .doc(_auth.currentUser!.uid)
-      .collection('budgets')
+      .collection('budgetPlans')
       .orderBy('month', descending: true)
       .snapshots()
       .map((snapshot) {
@@ -101,7 +101,7 @@ class BudgetService extends ChangeNotifier {
           } catch (e) {
             // No fallback available, create a default budget
             return BudgetModel(
-              id: 'default-${currentMonth}',
+              id: 'default-$currentMonth',
               month: currentMonth,
               maxKwh: 150.0, // default values
               maxCost: 500.0,
@@ -145,6 +145,9 @@ class BudgetService extends ChangeNotifier {
     required String month,
     required double maxKwh,
     required double maxCost,
+    String? name,
+    String? description,
+    List<String>? recommendations,
   }) async {
     try {
       if (_auth.currentUser == null) return null;
@@ -153,7 +156,7 @@ class BudgetService extends ChangeNotifier {
       final existingBudget = await _firestore
           .collection('users')
           .doc(_auth.currentUser!.uid)
-          .collection('budgets')
+          .collection('budgetPlans')
           .where('month', isEqualTo: month)
           .get();
 
@@ -161,16 +164,24 @@ class BudgetService extends ChangeNotifier {
         throw Exception('A budget already exists for this month');
       }
 
+      // Prepare document data
+      final Map<String, dynamic> budgetData = {
+        'month': month,
+        'maxKwh': maxKwh,
+        'maxCost': maxCost,
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+      
+      // Add optional fields if provided
+      if (name != null) budgetData['name'] = name;
+      if (description != null) budgetData['description'] = description;
+      if (recommendations != null) budgetData['recommendations'] = recommendations;
+      
       final docRef = await _firestore
           .collection('users')
           .doc(_auth.currentUser!.uid)
-          .collection('budgets')
-          .add({
-            'month': month,
-            'maxKwh': maxKwh,
-            'maxCost': maxCost,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+          .collection('budgetPlans')
+          .add(budgetData);
 
       final doc = await docRef.get();
       final newBudget = BudgetModel.fromMap(
@@ -197,16 +208,47 @@ class BudgetService extends ChangeNotifier {
     required String month,
     required double maxKwh,
     required double maxCost,
+    String? name,
+    String? description,
+    List<String>? recommendations,
   }) async {
     try {
       if (_auth.currentUser == null) return false;
 
+      // Check if this is a fallback budget that doesn't exist in Firestore
+      if (id.startsWith('fallback-')) {
+        debugPrint('Detected update for fallback budget. Creating new budget instead.');
+        // Create a new budget instead of updating
+        final newBudget = await addBudget(
+          month: month,
+          maxKwh: maxKwh,
+          maxCost: maxCost,
+          name: name,
+          description: description,
+          recommendations: recommendations,
+        );
+        return newBudget != null;
+      }
+
+      // Prepare update data
+      final Map<String, dynamic> updateData = {
+        'month': month,
+        'maxKwh': maxKwh,
+        'maxCost': maxCost,
+      };
+      
+      // Add optional fields if provided
+      if (name != null) updateData['name'] = name;
+      if (description != null) updateData['description'] = description;
+      if (recommendations != null) updateData['recommendations'] = recommendations;
+      
+      // Normal update for real budgets
       await _firestore
           .collection('users')
           .doc(_auth.currentUser!.uid)
-          .collection('budgets')
+          .collection('budgetPlans')
           .doc(id)
-          .update({'month': month, 'maxKwh': maxKwh, 'maxCost': maxCost});
+          .update(updateData);
 
       // Update local list
       final index = _budgets.indexWhere((budget) => budget.id == id);
@@ -217,6 +259,9 @@ class BudgetService extends ChangeNotifier {
           maxKwh: maxKwh,
           maxCost: maxCost,
           createdAt: _budgets[index].createdAt,
+          name: name ?? _budgets[index].name,
+          description: description ?? _budgets[index].description,
+          recommendations: recommendations ?? _budgets[index].recommendations,
         );
         
         _budgets[index] = updatedBudget;
@@ -241,7 +286,7 @@ class BudgetService extends ChangeNotifier {
       await _firestore
           .collection('users')
           .doc(_auth.currentUser!.uid)
-          .collection('budgets')
+          .collection('budgetPlans')
           .doc(id)
           .delete();
 
@@ -279,7 +324,7 @@ class BudgetService extends ChangeNotifier {
           // Create a new budget for current month based on previous month's data
           debugPrint('Using previous month budget as fallback: $previousMonthFormatted');
           budget = BudgetModel(
-            id: 'fallback-${currentMonth}',
+            id: 'fallback-$currentMonth',
             month: currentMonth, // Use current month in UI
             maxKwh: budget.maxKwh,
             maxCost: budget.maxCost,
@@ -290,7 +335,7 @@ class BudgetService extends ChangeNotifier {
           // If still not found, create a default budget object
           debugPrint('No budget found, using default values');
           budget = BudgetModel(
-            id: 'default-${currentMonth}',
+            id: 'default-$currentMonth',
             month: currentMonth,
             maxKwh: 150.0, // default values
             maxCost: 500.0,
@@ -304,7 +349,7 @@ class BudgetService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error getting budget with fallback: $e');
       return BudgetModel(
-        id: 'default-${currentMonth}',
+        id: 'default-$currentMonth',
         month: currentMonth,
         maxKwh: 150.0, // default values
         maxCost: 500.0,
