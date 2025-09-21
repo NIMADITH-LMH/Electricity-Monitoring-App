@@ -123,13 +123,28 @@ Before you begin, ensure you have the following installed:
 - **Dashboard**: Overview of electricity usage and costs
 - **Appliance Management**: Add, edit, and track electricity consumption of home appliances
 - **Usage Monitoring**: Track and visualize electricity usage patterns
+- **Advanced Usage Analytics**: 
+  - Daily/Weekly/Monthly/Yearly usage views
+  - Time-of-day usage breakdown with pie charts
+  - Peak usage identification
+  - Usage trend analysis
+  - Future usage predictions
+- **Gamification**:
+  - Streaks for daily energy-saving actions
+  - Achievement badges for conservation milestones
+  - Progress tracking for conservation goals
 - **Budget Planning**: Set and monitor electricity budget goals
 - **Energy-Saving Tips**: Receive personalized tips to reduce electricity consumption
 - **Bill Management**: Track and manage electricity bills
 - **Reports**: Generate and export PDF reports of usage history
-- **Notifications**: Receive alerts for budget limits, tips, and important updates
+- **Smart Notification System**:
+  - Multi-level usage alerts (yellow/orange/red)
+  - Customizable usage thresholds
+  - Background monitoring and alerts even when app is closed
+  - Persistent notifications for critical usage levels
 - **User Profile**: Manage personal information and app preferences
 - **Settings**: Customize app behavior and notification preferences
+- **Developer Tools**: Testing utilities for notifications and background services
 
 ## 👥 Contributing
 

@@ -9,11 +9,14 @@ This repository contains a Flutter-based mobile application designed to help use
 ## ✨ Key Features
 
 - User authentication and profile management
-- Real-time electricity usage monitoring
+- Real-time electricity usage monitoring with detailed analytics
 - Appliance management and consumption tracking
-- Budget planning and notifications
+- Budget planning and multi-level alert notifications
 - Energy-saving tips and recommendations
 - Bill management and PDF report generation
+- Streaks and badges gamification for energy conservation
+- Daily usage breakdown with time-of-day analysis
+- Usage prediction and trend analysis
 
 ## 🚀 Quick Start
 
