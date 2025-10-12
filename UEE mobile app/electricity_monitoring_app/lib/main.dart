@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'screens/auth/login_screen.dart';
 import 'screens/splash_screen.dart';
+import 'widgets/auth_wrapper.dart';
 import 'screens/appliance/appliance_list_screen.dart';
 import 'screens/appliance/add_appliance_screen.dart';
 import 'screens/settings/settings_screen.dart';
@@ -29,13 +29,19 @@ import 'providers/budget_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase
-  await Firebase.initializeApp();
-  
-  // Initialize workmanager for background tasks
-  await initializeWorkManager();
-  
+
+  try {
+    // Initialize Firebase first
+    await Firebase.initializeApp();
+    print('Firebase initialized successfully');
+
+    // Initialize workmanager for background tasks after Firebase
+    await initializeWorkManager();
+    print('Workmanager initialized successfully');
+  } catch (e) {
+    print('Error during initialization: $e');
+  }
+
   runApp(const MyApp());
 }
 
@@ -52,7 +58,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => UsageRecordService()),
         ChangeNotifierProvider(create: (_) => ApplianceService()),
         ChangeNotifierProvider(create: (_) => BudgetService()),
-        ChangeNotifierProvider(create: (_) => BudgetPlanService()), // Add new BudgetPlanService
+        ChangeNotifierProvider(
+          create: (_) => BudgetPlanService(),
+        ), // Add new BudgetPlanService
         ChangeNotifierProvider(create: (_) => UserProfileService()),
         ChangeNotifierProvider(create: (_) => UsageReminderService()),
         ChangeNotifierProvider(create: (_) => UsageAnalyticsService()),
@@ -61,8 +69,8 @@ class MyApp extends StatelessWidget {
         // Create BudgetProvider with dependency on BudgetService
         ChangeNotifierProxyProvider<BudgetService, BudgetProvider>(
           create: (_) => BudgetProvider(BudgetService()),
-          update: (_, budgetService, previous) => 
-            previous ?? BudgetProvider(budgetService),
+          update: (_, budgetService, previous) =>
+              previous ?? BudgetProvider(budgetService),
         ),
       ],
       child: MaterialApp(
@@ -70,7 +78,7 @@ class MyApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         // Use light theme since dark theme is not defined
         themeMode: ThemeMode.light,
-        home: const SplashScreen(nextScreen: LoginScreen()),
+        home: const SplashScreen(nextScreen: AuthWrapper()),
         routes: {
           '/appliances': (context) => const ApplianceListScreen(),
           '/add-appliance': (context) => const AddApplianceScreen(),
@@ -79,9 +87,11 @@ class MyApp extends StatelessWidget {
               NotificationPreferencesScreen(),
           '/notifications': (context) => NotificationsScreen(),
           '/usage-analytics': (context) => UsageAnalyticsScreen(),
-          '/budget-plan-selection': (context) => const BudgetPlanSelectionScreen(),
+          '/budget-plan-selection': (context) =>
+              const BudgetPlanSelectionScreen(),
           '/streak-and-badges': (context) => const StreakAndBadgesPage(),
-          '/usage-notification-test': (context) => const UsageNotificationTestScreen(),
+          '/usage-notification-test': (context) =>
+              const UsageNotificationTestScreen(),
           // We can't use routes for EditApplianceScreen because it needs an appliance parameter
         },
       ),

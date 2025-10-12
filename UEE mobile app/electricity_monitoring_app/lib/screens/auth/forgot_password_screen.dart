@@ -29,19 +29,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(
         email: _emailController.text.trim(),
       );
 
-      setState(() {
-        _emailSent = true;
-      });
+      if (mounted) {
+        setState(() {
+          _emailSent = true;
+        });
+      }
     } on FirebaseAuthException catch (e) {
       String message;
 
@@ -56,17 +60,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           message = 'An error occurred. Please try again later.';
       }
 
-      setState(() {
-        _errorMessage = message;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = message;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'An unexpected error occurred. Please try again.';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'An unexpected error occurred. Please try again.';
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

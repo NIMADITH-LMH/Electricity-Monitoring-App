@@ -39,10 +39,12 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
@@ -90,17 +92,23 @@ class _SignupScreenState extends State<SignupScreen> {
           message = 'An error occurred. Please try again later.';
       }
 
-      setState(() {
-        _errorMessage = message;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = message;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'An unexpected error occurred. Please try again.';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'An unexpected error occurred. Please try again.';
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -131,219 +139,223 @@ class _SignupScreenState extends State<SignupScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                // Title
-                Text(
-                  'Create Account',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 4.0,
-                        color: Colors.black.withOpacity(0.5),
-                        offset: const Offset(1, 1),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Sign up to monitor your electricity usage',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 2.0,
-                        color: Colors.black.withOpacity(0.3),
-                        offset: const Offset(1, 1),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Form
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Error message
-                      if (_errorMessage != null) ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppTheme.errorColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                color: AppTheme.errorColor,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  _errorMessage!,
-                                  style: const TextStyle(
-                                    color: AppTheme.errorColor,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                  // Title
+                  Text(
+                    'Create Account',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          blurRadius: 4.0,
+                          color: Colors.black.withOpacity(0.5),
+                          offset: const Offset(1, 1),
                         ),
-                        const SizedBox(height: 20),
                       ],
-
-                      // Name field
-                      CustomTextField(
-                        label: 'Full Name',
-                        hintText: 'Enter your full name',
-                        controller: _nameController,
-                        textCapitalization: TextCapitalization.words,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your name';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Email field
-                      CustomTextField(
-                        label: 'Email Address',
-                        hintText: 'Enter your email',
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your email';
-                          }
-                          if (!RegExp(
-                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                          ).hasMatch(value)) {
-                            return 'Please enter a valid email address';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Password field
-                      CustomTextField(
-                        label: 'Password',
-                        hintText: 'Create a password',
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: AppTheme.lightTextColor,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sign up to monitor your electricity usage',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          blurRadius: 2.0,
+                          color: Colors.black.withOpacity(0.3),
+                          offset: const Offset(1, 1),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter a password';
-                          }
-                          if (value.length < 6) {
-                            return 'Password must be at least 6 characters';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
 
-                      // Confirm password field
-                      CustomTextField(
-                        label: 'Confirm Password',
-                        hintText: 'Confirm your password',
-                        controller: _confirmPasswordController,
-                        obscureText: _obscureConfirmPassword,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirmPassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: AppTheme.lightTextColor,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureConfirmPassword =
-                                  !_obscureConfirmPassword;
-                            });
-                          },
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please confirm your password';
-                          }
-                          if (value != _passwordController.text) {
-                            return 'Passwords do not match';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Sign up button
-                      CustomButton(
-                        text: 'Create Account',
-                        onPressed: _submitForm,
-                        isLoading: _isLoading,
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Sign in option
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Already have an account? ',
-                            style: TextStyle(
-                              color: Colors.white,
-                              shadows: [
-                                Shadow(
-                                  blurRadius: 2.0,
-                                  color: Colors.black.withOpacity(0.3),
-                                  offset: const Offset(1, 1),
+                  // Form
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Error message
+                        if (_errorMessage != null) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.errorColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: AppTheme.errorColor,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: const TextStyle(
+                                      color: AppTheme.errorColor,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).pop();
+                          const SizedBox(height: 20),
+                        ],
+
+                        // Name field
+                        CustomTextField(
+                          label: 'Full Name',
+                          hintText: 'Enter your full name',
+                          controller: _nameController,
+                          textCapitalization: TextCapitalization.words,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your name';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Email field
+                        CustomTextField(
+                          label: 'Email Address',
+                          hintText: 'Enter your email',
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your email';
+                            }
+                            if (!RegExp(
+                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                            ).hasMatch(value)) {
+                              return 'Please enter a valid email address';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Password field
+                        CustomTextField(
+                          label: 'Password',
+                          hintText: 'Create a password',
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: AppTheme.lightTextColor,
+                            ),
+                            onPressed: () {
+                              if (mounted) {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              }
                             },
-                            child: Text(
-                              'Sign In',
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter a password';
+                            }
+                            if (value.length < 6) {
+                              return 'Password must be at least 6 characters';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Confirm password field
+                        CustomTextField(
+                          label: 'Confirm Password',
+                          hintText: 'Confirm your password',
+                          controller: _confirmPasswordController,
+                          obscureText: _obscureConfirmPassword,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureConfirmPassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: AppTheme.lightTextColor,
+                            ),
+                            onPressed: () {
+                              if (mounted) {
+                                setState(() {
+                                  _obscureConfirmPassword =
+                                      !_obscureConfirmPassword;
+                                });
+                              }
+                            },
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please confirm your password';
+                            }
+                            if (value != _passwordController.text) {
+                              return 'Passwords do not match';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Sign up button
+                        CustomButton(
+                          text: 'Create Account',
+                          onPressed: _submitForm,
+                          isLoading: _isLoading,
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Sign in option
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Already have an account? ',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontWeight: FontWeight.bold,
                                 shadows: [
                                   Shadow(
                                     blurRadius: 2.0,
-                                    color: Colors.black.withOpacity(0.5),
+                                    color: Colors.black.withOpacity(0.3),
                                     offset: const Offset(1, 1),
                                   ),
                                 ],
                               ),
                             ),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text(
+                                'Sign In',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  shadows: [
+                                    Shadow(
+                                      blurRadius: 2.0,
+                                      color: Colors.black.withOpacity(0.5),
+                                      offset: const Offset(1, 1),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
                         ),

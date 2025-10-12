@@ -7,6 +7,7 @@ import '../../services/usage_record_service.dart';
 import '../../services/tip_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/usage_reminder_service.dart';
+import '../../services/admin_tip_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/custom_card.dart';
 import '../../widgets/elegant_usage_card.dart';
@@ -16,6 +17,7 @@ import '../budget/budget_screen.dart';
 import '../usage/usage_records_screen.dart';
 import '../tips/tips_list_screen.dart';
 import '../badges/streak_and_badges_page.dart';
+import '../admin/admin_dashboard_screen.dart';
 import '../../providers/budget_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -31,13 +33,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
   String _userName = '';
   Timer? _debounceTimer;
+  bool _isAdmin = false;
+  final AdminTipService _adminTipService = AdminTipService();
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _checkAdminStatus();
   }
-  
+
   @override
   void dispose() {
     _debounceTimer?.cancel();
@@ -47,15 +52,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadData() async {
     // Cancel any existing debounce timer
     _debounceTimer?.cancel();
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     // Use debounce to prevent excessive loading
     _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
       final authService = Provider.of<AuthService>(context, listen: false);
-  
+
       try {
         // Get user info
         final user = await authService.getCurrentUserData();
@@ -64,26 +69,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _userName = user.name;
           });
         }
-  
+
         // Preload appliances data
         await Provider.of<ApplianceService>(
           context,
           listen: false,
         ).fetchAppliances();
-  
-      // No need to explicitly load budget data here anymore
-      // The BudgetService stream will handle this automatically        // Preload usage records
+
+        // No need to explicitly load budget data here anymore
+        // The BudgetService stream will handle this automatically        // Preload usage records
         await Provider.of<UsageRecordService>(
           context,
           listen: false,
         ).fetchUsageRecords();
-  
+
         // Preload energy saving tips
         await Provider.of<TipService>(context, listen: false).fetchTips();
-  
+
         // Initialize notifications
         await NotificationService().initialize();
-  
+
         // Initialize usage reminders
         await _initializeUsageReminders();
       } catch (e) {
@@ -99,14 +104,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _signOut() async {
-    try {
-      final authService = Provider.of<AuthService>(context, listen: false);
-      await authService.signOut();
-      // Navigation is handled by AuthService state change listener
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error signing out: $e')));
+    // Show confirmation dialog
+    final bool? shouldSignOut = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Sign Out'),
+          content: const Text('Are you sure you want to sign out?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Sign Out'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // Only proceed with sign out if user confirmed
+    if (shouldSignOut == true) {
+      try {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        await authService.signOut();
+        // Navigation is handled by AuthService state change listener
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error signing out: $e')));
+      }
     }
   }
 
@@ -133,6 +163,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (e) {
       debugPrint('Error initializing usage reminders: $e');
     }
+  }
+
+  Future<void> _checkAdminStatus() async {
+    try {
+      bool isAdmin = await _adminTipService.isCurrentUserAdmin();
+      if (mounted) {
+        setState(() {
+          _isAdmin = isAdmin;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error checking admin status: $e');
+    }
+  }
+
+  void _navigateToAdminDashboard() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+    );
   }
 
   Widget _buildNotificationButton() {
@@ -202,6 +252,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: const Text('Electricity Monitor'),
         backgroundColor: AppTheme.primaryColor,
         actions: [
+          if (_isAdmin)
+            IconButton(
+              icon: const Icon(Icons.admin_panel_settings),
+              onPressed: _navigateToAdminDashboard,
+              tooltip: 'Admin Dashboard',
+            ),
           _buildNotificationButton(),
           IconButton(icon: const Icon(Icons.logout), onPressed: _signOut),
         ],
@@ -209,7 +265,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/electricity managing mobile app background image.jpg'),
+            image: AssetImage(
+              'assets/images/electricity managing mobile app background image.jpg',
+            ),
             fit: BoxFit.cover,
           ),
         ),
@@ -222,35 +280,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     // Welcome section
                     Text(
-                    'Hello, $_userName!',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          blurRadius: 4.0,
-                          color: Colors.black.withOpacity(0.5),
-                          offset: const Offset(1, 1),
-                        ),
-                      ],
+                      'Hello, $_userName!',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 4.0,
+                            color: Colors.black.withOpacity(0.5),
+                            offset: const Offset(1, 1),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Text(
-                    'Welcome to your electricity monitoring dashboard',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          blurRadius: 2.0,
-                          color: Colors.black.withOpacity(0.3),
-                          offset: const Offset(1, 1),
-                        ),
-                      ],
+                    Text(
+                      'Welcome to your electricity monitoring dashboard',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 2.0,
+                            color: Colors.black.withOpacity(0.3),
+                            offset: const Offset(1, 1),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
                     // Current month usage
                     _buildCurrentUsageSection(),
@@ -271,7 +329,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Optimized using StreamBuilder to prevent multiple budget fetches
   Widget _buildCurrentUsageSection() {
-    final usageService = Provider.of<UsageRecordService>(context, listen: false);
+    final usageService = Provider.of<UsageRecordService>(
+      context,
+      listen: false,
+    );
     final now = DateTime.now();
     final month = _getMonthName(now.month);
     final year = now.year.toString();
@@ -279,7 +340,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Get current usage data - can be cached
     final totalKwh = usageService.getTotalKwhForMonth(now.year, now.month);
     final totalCost = usageService.getTotalCostForMonth(now.year, now.month);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -304,24 +365,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (provider.isLoading) {
               return const Center(child: CircularProgressIndicator());
             }
-            
+
             // Get the current budget from the provider
             final currentBudget = provider.currentBudget;
-            
+
             // Calculate usage percentages with null safety
             double kwhPercentage = 0;
             double costPercentage = 0;
             double maxKwh = currentBudget?.maxKwh ?? 160.0; // Default if null
-            double maxCost = currentBudget?.maxCost ?? 1000.0; // Default if null
-            
+            double maxCost =
+                currentBudget?.maxCost ?? 1000.0; // Default if null
+
             if (currentBudget != null && maxKwh > 0) {
               kwhPercentage = (totalKwh / maxKwh) * 100;
             }
-            
+
             if (currentBudget != null && maxCost > 0) {
               costPercentage = (totalCost / maxCost) * 100;
             }
-            
+
             return ElegantUsageCard(
               month: month,
               year: year,
@@ -333,9 +395,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               costPercentage: costPercentage,
               onViewDetails: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const BudgetScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const BudgetScreen()),
                 );
               },
             );
@@ -344,8 +404,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
     );
   }
-
-
 
   Widget _buildQuickActionsGrid() {
     return Column(

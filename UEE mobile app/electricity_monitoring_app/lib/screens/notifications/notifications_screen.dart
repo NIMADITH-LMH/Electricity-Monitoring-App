@@ -24,10 +24,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadNotifications();
+    // Delay loading notifications to ensure Provider is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadNotifications();
+    });
   }
 
   Future<void> _loadNotifications() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
     });
@@ -40,9 +45,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         final notifications = await _notificationService.getUserNotifications(
           user.uid,
         );
-        setState(() {
-          _notifications = notifications;
-        });
+        if (mounted) {
+          setState(() {
+            _notifications = notifications;
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error loading notifications: $e');
@@ -55,18 +62,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'Notifications system is being configured. Please try again later.';
       }
 
-      setState(() {
-        _hadError = true;
-        _errorMessage = errorMessage;
-      });
+      if (mounted) {
+        setState(() {
+          _hadError = true;
+          _errorMessage = errorMessage;
+        });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
