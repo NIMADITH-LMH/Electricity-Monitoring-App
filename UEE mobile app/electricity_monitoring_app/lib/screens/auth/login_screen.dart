@@ -37,10 +37,12 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
@@ -86,17 +88,23 @@ class _LoginScreenState extends State<LoginScreen> {
           message = 'An error occurred. Please try again later.';
       }
 
-      setState(() {
-        _errorMessage = message;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = message;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'An unexpected error occurred. Please try again.';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'An unexpected error occurred. Please try again.';
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -118,212 +126,215 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                // App logo and title
-                const Icon(
-                  Icons.electric_bolt,
-                  size: 72,
-                  color: AppTheme.primaryColor,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Electricity Monitor',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 4.0,
-                        color: Colors.black.withOpacity(0.5),
-                        offset: const Offset(1, 1),
-                      ),
-                    ],
+                  // App logo and title
+                  const Icon(
+                    Icons.electric_bolt,
+                    size: 72,
+                    color: AppTheme.primaryColor,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Sign in to continue',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 2.0,
-                        color: Colors.black.withOpacity(0.3),
-                        offset: const Offset(1, 1),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Form
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Error message
-                      if (_errorMessage != null) ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppTheme.errorColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                color: AppTheme.errorColor,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  _errorMessage!,
-                                  style: const TextStyle(
-                                    color: AppTheme.errorColor,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Electricity Monitor',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          blurRadius: 4.0,
+                          color: Colors.black.withOpacity(0.5),
+                          offset: const Offset(1, 1),
                         ),
-                        const SizedBox(height: 20),
                       ],
-
-                      // Email field
-                      CustomTextField(
-                        label: 'Email Address',
-                        hintText: 'Enter your email',
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your email';
-                          }
-                          if (!RegExp(
-                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                          ).hasMatch(value)) {
-                            return 'Please enter a valid email address';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Password field
-                      CustomTextField(
-                        label: 'Password',
-                        hintText: 'Enter your password',
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: AppTheme.lightTextColor,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sign in to continue',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          blurRadius: 2.0,
+                          color: Colors.black.withOpacity(0.3),
+                          offset: const Offset(1, 1),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
-                          }
-                          return null;
-                        },
-                      ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
 
-                      // Forgot password link
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const ForgotPasswordScreen(),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            'Forgot Password?',
-                            style: TextStyle(
-                              color: AppTheme.secondaryColor,
-                              fontWeight: FontWeight.w600,
+                  // Form
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Error message
+                        if (_errorMessage != null) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.errorColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Sign in button
-                      CustomButton(
-                        text: 'Sign In',
-                        onPressed: _submitForm,
-                        isLoading: _isLoading,
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Sign up option
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Don\'t have an account? ',
-                            style: TextStyle(
-                              color: Colors.white,
-                              shadows: [
-                                Shadow(
-                                  blurRadius: 2.0,
-                                  color: Colors.black.withOpacity(0.3),
-                                  offset: const Offset(1, 1),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: AppTheme.errorColor,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: const TextStyle(
+                                      color: AppTheme.errorColor,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () {
+                          const SizedBox(height: 20),
+                        ],
+
+                        // Email field
+                        CustomTextField(
+                          label: 'Email Address',
+                          hintText: 'Enter your email',
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your email';
+                            }
+                            if (!RegExp(
+                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                            ).hasMatch(value)) {
+                              return 'Please enter a valid email address';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Password field
+                        CustomTextField(
+                          label: 'Password',
+                          hintText: 'Enter your password',
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: AppTheme.lightTextColor,
+                            ),
+                            onPressed: () {
+                              if (mounted) {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              }
+                            },
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your password';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        // Forgot password link
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (context) => const SignupScreen(),
+                                  builder: (context) =>
+                                      const ForgotPasswordScreen(),
                                 ),
                               );
                             },
-                            child: Text(
-                              'Sign Up',
+                            child: const Text(
+                              'Forgot Password?',
+                              style: TextStyle(
+                                color: AppTheme.secondaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Sign in button
+                        CustomButton(
+                          text: 'Sign In',
+                          onPressed: _submitForm,
+                          isLoading: _isLoading,
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Sign up option
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Don\'t have an account? ',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontWeight: FontWeight.bold,
                                 shadows: [
                                   Shadow(
                                     blurRadius: 2.0,
-                                    color: Colors.black.withOpacity(0.5),
+                                    color: Colors.black.withOpacity(0.3),
                                     offset: const Offset(1, 1),
                                   ),
                                 ],
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const SignupScreen(),
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                'Sign Up',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  shadows: [
+                                    Shadow(
+                                      blurRadius: 2.0,
+                                      color: Colors.black.withOpacity(0.5),
+                                      offset: const Offset(1, 1),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ));
+    );
   }
 }

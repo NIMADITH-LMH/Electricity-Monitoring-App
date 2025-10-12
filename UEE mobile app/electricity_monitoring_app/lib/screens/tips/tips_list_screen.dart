@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../models/tip_model.dart';
 import '../../services/tip_service.dart';
 import '../../utils/app_theme.dart';
-import '../../widgets/custom_app_bar.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/custom_card.dart';
@@ -23,18 +22,64 @@ class _TipsListScreenState extends State<TipsListScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _loadTips();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadTips() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await Provider.of<TipService>(context, listen: false).fetchTips();
+    } catch (e) {
+      debugPrint('Error loading tips: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load tips: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: const CustomAppBar(
-        title: 'Energy Saving Tips',
-        showBackButton: true,
+      appBar: AppBar(
+        title: const Text('Energy Saving Tips'),
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadTips,
+            tooltip: 'Refresh tips',
+          ),
+        ],
       ),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(

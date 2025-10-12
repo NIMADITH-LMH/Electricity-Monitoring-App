@@ -23,7 +23,12 @@ class TipService extends ChangeNotifier {
   // Get tips from Firestore
   Future<List<TipModel>> fetchTips() async {
     try {
-      if (_auth.currentUser == null) return [];
+      if (_auth.currentUser == null) {
+        debugPrint('No authenticated user found');
+        return [];
+      }
+
+      debugPrint('Fetching tips for user: ${_auth.currentUser!.uid}');
 
       // Fetch user's custom tips
       final userTipsSnapshot = await _firestore
@@ -37,15 +42,71 @@ class TipService extends ChangeNotifier {
           .map((doc) => TipModel.fromMap(doc.data(), doc.id))
           .toList();
 
-      // Fetch system/admin tips (available to all users)
-      final systemTipsSnapshot = await _firestore
-          .collection('tips')
-          .orderBy('createdAt', descending: true)
-          .get();
+      debugPrint('Fetched ${_tips.length} user tips');
 
-      _systemTips = systemTipsSnapshot.docs
-          .map((doc) => TipModel.fromMap(doc.data(), doc.id))
-          .toList();
+      // Fetch system/admin tips (available to all users)
+      List<TipModel> systemTips = [];
+      try {
+        final systemTipsSnapshot = await _firestore
+            .collection('tips')
+            .orderBy('createdAt', descending: true)
+            .get();
+
+        systemTips = systemTipsSnapshot.docs
+            .map((doc) => TipModel.fromMap(doc.data(), doc.id))
+            .toList();
+
+        debugPrint('Fetched ${systemTips.length} system tips');
+      } catch (systemTipsError) {
+        debugPrint('Error fetching system tips: $systemTipsError');
+        // systemTips remains empty list if there's an error
+      }
+
+      // Fetch admin tips and convert them to TipModel format
+      List<TipModel> adminTips = [];
+      try {
+        final adminTipsSnapshot = await _firestore
+            .collection('admin_tips')
+            .where('isActive', isEqualTo: true)
+            .orderBy('createdAt', descending: true)
+            .get();
+
+        debugPrint('Fetched ${adminTipsSnapshot.docs.length} admin tips');
+
+        adminTips = adminTipsSnapshot.docs.map((doc) {
+          final data = doc.data();
+          debugPrint('Processing admin tip: ${data['title']}');
+          // Convert AdminTipModel to TipModel for display
+          return TipModel(
+            id: doc.id,
+            title: data['title'] ?? '',
+            description: data['description'] ?? '',
+            category: data['category'] ?? '',
+            createdBy: 'admin', // Mark as admin-created
+            createdAt:
+                (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            estimatedSavings: (data['estimatedSavings'] as num?)?.toDouble(),
+            difficulty: data['difficulty'] ?? 'medium',
+            potentialSavingsKwh:
+                (data['potentialSavingsKwh'] as num?)?.toDouble() ?? 0.0,
+          );
+        }).toList();
+
+        debugPrint(
+          'Converted ${adminTips.length} admin tips to TipModel format',
+        );
+      } catch (adminTipsError) {
+        debugPrint('Error fetching admin tips: $adminTipsError');
+        if (adminTipsError.toString().contains('permission-denied')) {
+          debugPrint(
+            'Permission denied for admin_tips collection. Check Firestore security rules.',
+          );
+        }
+        // adminTips remains empty list if there's an error
+      }
+
+      // Combine system tips and admin tips
+      _systemTips = [...systemTips, ...adminTips];
 
       // Extract unique categories
       _updateCategories();
@@ -205,20 +266,24 @@ class TipService extends ChangeNotifier {
           .get();
 
       List<UserTipModel> results = [];
-      
+
       for (var doc in querySnapshot.docs) {
         try {
           final data = doc.data();
-          
+
           // Safe timestamp handling for debugging
           final lastUpdatedAt = data['lastUpdatedAt'];
           if (lastUpdatedAt != null && lastUpdatedAt is Timestamp) {
             final dateTime = lastUpdatedAt.toDate();
-            debugPrint('Tip interaction timestamp: $dateTime for doc ${doc.id}');
+            debugPrint(
+              'Tip interaction timestamp: $dateTime for doc ${doc.id}',
+            );
           } else {
-            debugPrint('Warning: lastUpdatedAt field is null or not a Timestamp for doc ${doc.id}');
+            debugPrint(
+              'Warning: lastUpdatedAt field is null or not a Timestamp for doc ${doc.id}',
+            );
           }
-          
+
           // Use our safer fromMap method that has null safety built in
           results.add(UserTipModel.fromMap(data, doc.id));
         } catch (docError) {
@@ -226,7 +291,7 @@ class TipService extends ChangeNotifier {
           // Continue processing other documents
         }
       }
-      
+
       return results;
     } catch (e) {
       debugPrint('Error getting user tip interactions: $e');

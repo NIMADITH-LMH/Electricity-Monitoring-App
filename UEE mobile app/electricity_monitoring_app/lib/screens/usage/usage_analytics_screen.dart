@@ -596,7 +596,7 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen>
             child: Column(
               children: [
                 // Pie chart with proper constraints
-                Container(
+                SizedBox(
                   height: 180, // Fixed height to prevent overflow
                   child: _buildPieChart(),
                 ),

@@ -8,6 +8,13 @@ class AuthService extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   UserModel? _user;
 
+  AuthService() {
+    // Listen to auth state changes
+    _auth.authStateChanges().listen((User? user) {
+      notifyListeners();
+    });
+  }
+
   // Getters
   User? get currentUser => _auth.currentUser;
   UserModel? get userModel => _user;

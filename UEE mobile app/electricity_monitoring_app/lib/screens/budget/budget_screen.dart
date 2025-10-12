@@ -56,13 +56,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
           IconButton(
             icon: const Icon(Icons.upgrade, color: AppTheme.secondaryColor),
             tooltip: 'Select Budget Plan',
-            onPressed: () => Navigator.pushNamed(context, '/budget-plan-selection'),
+            onPressed: () =>
+                Navigator.pushNamed(context, '/budget-plan-selection'),
           ),
         ],
       ),
-      body: BackgroundContainer(
-        child: _buildBody(),
-      ),
+      body: BackgroundContainer(child: _buildBody()),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.secondaryColor,
         onPressed: () => _showAddEditBudgetDialog(),
@@ -74,17 +73,17 @@ class _BudgetScreenState extends State<BudgetScreen> {
   // Fetch budget data asynchronously
   Future<Map<String, dynamic>> _fetchBudgetData() async {
     final budgetService = Provider.of<BudgetService>(context, listen: false);
-    
+
     // Get current budgets list
     final budgets = budgetService.budgets;
-    
+
     // Get current month's budget
     final currentBudget = budgetService.getCurrentMonthBudget();
-    
+
     // Get previous budgets, filtering out the current one
     List<BudgetModel> previousBudgets = [];
     previousBudgets = budgets.where((b) => b.id != currentBudget.id).toList();
-      
+
     return {
       'budgets': budgets,
       'currentBudget': currentBudget,
@@ -98,27 +97,30 @@ class _BudgetScreenState extends State<BudgetScreen> {
         if (_isLoading) {
           return const LoadingIndicator(message: 'Loading budget data...');
         }
-        
+
         return FutureBuilder<Map<String, dynamic>>(
           // Avoid recreating the future on each rebuild
           future: _fetchBudgetData(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const LoadingIndicator(message: 'Processing budget data...');
+              return const LoadingIndicator(
+                message: 'Processing budget data...',
+              );
             }
-            
+
             if (snapshot.hasError) {
               debugPrint('Error loading budget data: ${snapshot.error}');
               return Center(
                 child: Text('Error loading budget data: ${snapshot.error}'),
               );
             }
-            
+
             final data = snapshot.data!;
             final budgets = data['budgets'] as List<BudgetModel>;
             final currentBudget = data['currentBudget'] as BudgetModel?;
-            final previousBudgets = data['previousBudgets'] as List<BudgetModel>;
-            
+            final previousBudgets =
+                data['previousBudgets'] as List<BudgetModel>;
+
             if (budgets.isEmpty) {
               return Center(
                 child: Card(
@@ -143,37 +145,39 @@ class _BudgetScreenState extends State<BudgetScreen> {
             }
 
             return RefreshIndicator(
-          onRefresh: _loadBudgets,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (currentBudget != null) ...[
-                  _buildCurrentBudgetCard(currentBudget),
-                  const SizedBox(height: 24),
-                  _buildUsageChart(currentBudget),
-                  const SizedBox(height: 24),
-                ],
-                if (previousBudgets.isNotEmpty) ...[
-                  Text(
-                    'Previous Budgets',
-                    style: CardThemeHelper.getHeadingStyle(),
-                  ),
-                  const SizedBox(height: 16),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: previousBudgets.length,
-                    itemBuilder: (context, index) {
-                      return _buildPreviousBudgetCard(previousBudgets[index]);
-                    },
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
+              onRefresh: _loadBudgets,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (currentBudget != null) ...[
+                      _buildCurrentBudgetCard(currentBudget),
+                      const SizedBox(height: 24),
+                      _buildUsageChart(currentBudget),
+                      const SizedBox(height: 24),
+                    ],
+                    if (previousBudgets.isNotEmpty) ...[
+                      Text(
+                        'Previous Budgets',
+                        style: CardThemeHelper.getHeadingStyle(),
+                      ),
+                      const SizedBox(height: 16),
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: previousBudgets.length,
+                        itemBuilder: (context, index) {
+                          return _buildPreviousBudgetCard(
+                            previousBudgets[index],
+                          );
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
           },
         );
       },
@@ -216,11 +220,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
               children: [
                 Text(
                   'Current Budget',
-                  style: CardThemeHelper.getHeadingStyle().copyWith(color: AppTheme.textColor),
+                  style: CardThemeHelper.getHeadingStyle().copyWith(
+                    color: AppTheme.textColor,
+                  ),
                 ),
                 Text(
                   '$monthName $year',
-                  style: CardThemeHelper.getBodyTextStyle().copyWith(color: AppTheme.lightTextColor),
+                  style: CardThemeHelper.getBodyTextStyle().copyWith(
+                    color: AppTheme.lightTextColor,
+                  ),
                 ),
               ],
             ),
@@ -770,12 +778,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
     });
 
     try {
-      await Provider.of<BudgetService>(
-        context,
-        listen: false,
-      ).addBudget(
-        month: month, 
-        maxKwh: maxKwh, 
+      await Provider.of<BudgetService>(context, listen: false).addBudget(
+        month: month,
+        maxKwh: maxKwh,
         maxCost: maxCost,
         name: "Budget for $month",
         description: "Monthly budget for $month",
@@ -792,14 +797,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
     } catch (e) {
       debugPrint('Error creating budget: $e');
       if (mounted) {
+        String errorMessage;
+        if (e.toString().contains('already exists')) {
+          errorMessage = 'A budget already exists for this month';
+        } else if (e.toString().contains('permission-denied') ||
+            e.toString().contains('Permission denied')) {
+          errorMessage =
+              'Permission denied: Please contact support to enable budget creation';
+        } else {
+          errorMessage = 'Failed to create budget. Please try again.';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              e.toString().contains('already exists')
-                  ? 'A budget already exists for this month'
-                  : 'Failed to create budget. Please try again.',
-            ),
+            content: Text(errorMessage),
             backgroundColor: AppTheme.errorColor,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -824,17 +837,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
     });
 
     try {
-      final success = await Provider.of<BudgetService>(
-        context,
-        listen: false,
-      ).updateBudget(
-        id: id,
-        month: month, 
-        maxKwh: maxKwh, 
-        maxCost: maxCost,
-        name: "Budget for $month",
-        description: "Updated budget for $month",
-      );
+      final success = await Provider.of<BudgetService>(context, listen: false)
+          .updateBudget(
+            id: id,
+            month: month,
+            maxKwh: maxKwh,
+            maxCost: maxCost,
+            name: "Budget for $month",
+            description: "Updated budget for $month",
+          );
 
       if (mounted) {
         if (success) {
