@@ -94,6 +94,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   Widget _buildBody() {
     return Consumer<BudgetService>(
       builder: (context, budgetService, child) {
+        // Show loading indicator only when explicitly loading
         if (_isLoading) {
           return const LoadingIndicator(message: 'Loading budget data...');
         }
@@ -111,7 +112,50 @@ class _BudgetScreenState extends State<BudgetScreen> {
             if (snapshot.hasError) {
               debugPrint('Error loading budget data: ${snapshot.error}');
               return Center(
-                child: Text('Error loading budget data: ${snapshot.error}'),
+                child: Card(
+                  color: Colors.white.withOpacity(0.85),
+                  elevation: 4,
+                  margin: const EdgeInsets.all(16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: AppTheme.errorColor,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Error Loading Budget Data',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          snapshot.error.toString(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppTheme.lightTextColor),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadBudgets,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               );
             }
 
@@ -778,7 +822,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     });
 
     try {
-      await Provider.of<BudgetService>(context, listen: false).addBudget(
+      final result = await Provider.of<BudgetService>(context, listen: false).addBudget(
         month: month,
         maxKwh: maxKwh,
         maxCost: maxCost,
@@ -787,12 +831,21 @@ class _BudgetScreenState extends State<BudgetScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Budget created successfully'),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
+        if (result != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Budget created successfully'),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to create budget'),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error creating budget: $e');

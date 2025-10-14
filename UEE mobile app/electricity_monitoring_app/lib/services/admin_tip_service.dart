@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import '../models/admin_tip_model.dart';
 
 class AdminTipService {
@@ -8,7 +9,7 @@ class AdminTipService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
-  // Check if current user is admin
+  // Check if current user is admin - WITH BETTER ERROR HANDLING
   Future<bool> isCurrentUserAdmin() async {
     final user = _auth.currentUser;
     if (user == null) return false;
@@ -21,7 +22,12 @@ class AdminTipService {
 
       return adminDoc.exists && (adminDoc.data()?['isActive'] ?? false);
     } catch (e) {
-      print('Error checking admin status: $e');
+      // Handle transient network issues
+      if (e.toString().contains('unavailable') || e.toString().contains('Failed to get service')) {
+        debugPrint('Temporary network issue checking admin status, assuming not admin: $e');
+        return false; // Assume not admin if there's a network issue
+      }
+      debugPrint('Error checking admin status: $e');
       return false;
     }
   }
@@ -334,10 +340,14 @@ class AdminTipService {
     }
   }
 
-  // Get user engagement stats
+  // Get user engagement stats - WITH IMPROVED ERROR HANDLING
   Future<Map<String, dynamic>> getUserEngagementStats() async {
     try {
-      // Total users
+      // Total users - only admins should access this
+      if (!await isCurrentUserAdmin()) {
+        return {'totalUsers': 0, 'activeUsers': 0, 'engagementRate': 0};
+      }
+      
       QuerySnapshot usersSnapshot = await _firestore.collection('users').get();
       int totalUsers = usersSnapshot.docs.length;
 
@@ -346,10 +356,50 @@ class AdminTipService {
         const Duration(days: 30),
       );
 
-      QuerySnapshot recentTipsSnapshot = await _firestore
-          .collectionGroup('received_tips')
-          .where('sentAt', isGreaterThan: thirtyDaysAgo)
-          .get();
+      // Use a safer approach for collection group queries
+      QuerySnapshot recentTipsSnapshot;
+      try {
+        recentTipsSnapshot = await _firestore
+            .collectionGroup('received_tips')
+            .where('sentAt', isGreaterThan: thirtyDaysAgo)
+            .get();
+      } catch (e) {
+        // If collection group query fails due to permissions, try a different approach
+        debugPrint('Collection group query failed, using alternative approach: $e');
+        
+        // Alternative: Query each user's received tips individually (less efficient but works)
+        Set<String> activeUserIds = {};
+        List<DocumentSnapshot> userDocs = usersSnapshot.docs;
+        
+        // Limit the number of users we check to avoid performance issues
+        int userLimit = userDocs.length > 50 ? 50 : userDocs.length;
+        
+        for (int i = 0; i < userLimit; i++) {
+          try {
+            QuerySnapshot userTips = await _firestore
+                .collection('users')
+                .doc(userDocs[i].id)
+                .collection('received_tips')
+                .where('sentAt', isGreaterThan: thirtyDaysAgo)
+                .get();
+            
+            if (userTips.docs.isNotEmpty) {
+              activeUserIds.add(userDocs[i].id);
+            }
+          } catch (userQueryError) {
+            // Skip this user if we can't query their tips
+            debugPrint('Could not query tips for user ${userDocs[i].id}: $userQueryError');
+          }
+        }
+        
+        return {
+          'totalUsers': totalUsers,
+          'activeUsers': activeUserIds.length,
+          'engagementRate': totalUsers > 0
+              ? (activeUserIds.length / totalUsers * 100)
+              : 0,
+        };
+      }
 
       Set<String> activeUserIds = recentTipsSnapshot.docs
           .map((doc) => doc.reference.parent.parent!.id)
@@ -363,7 +413,7 @@ class AdminTipService {
             : 0,
       };
     } catch (e) {
-      print('Error getting user engagement stats: $e');
+      debugPrint('Error getting user engagement stats: $e');
       return {'totalUsers': 0, 'activeUsers': 0, 'engagementRate': 0};
     }
   }

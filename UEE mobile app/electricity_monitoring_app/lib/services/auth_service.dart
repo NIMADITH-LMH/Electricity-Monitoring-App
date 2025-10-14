@@ -111,7 +111,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Sign in with email and password
+  // Sign in with email and password - WITH BETTER ERROR HANDLING
   Future<UserCredential?> signIn({
     required String email,
     required String password,
@@ -127,7 +127,24 @@ class AuthService extends ChangeNotifier {
       return userCredential;
     } catch (e) {
       debugPrint('Error during sign in: $e');
-      rethrow;
+      
+      // Provide more specific error messages to the UI
+      if (e.toString().contains('network-request-failed')) {
+        // Network error - likely temporary
+        throw Exception('Network connection failed. Please check your internet connection and try again.');
+      } else if (e.toString().contains('invalid-credential')) {
+        // Wrong email or password
+        throw Exception('Invalid email or password. Please check your credentials and try again.');
+      } else if (e.toString().contains('user-not-found')) {
+        // User doesn't exist
+        throw Exception('No account found with this email address.');
+      } else if (e.toString().contains('wrong-password')) {
+        // Wrong password
+        throw Exception('Incorrect password. Please try again.');
+      } else {
+        // Generic error
+        throw Exception('Sign in failed. Please try again later.');
+      }
     }
   }
 

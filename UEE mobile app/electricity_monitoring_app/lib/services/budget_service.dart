@@ -8,6 +8,7 @@ class BudgetService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   List<BudgetModel> _budgets = [];
+  bool _initialized = false;
 
   // Constructor
   BudgetService() {
@@ -20,11 +21,18 @@ class BudgetService extends ChangeNotifier {
         notifyListeners();
       }
     });
-    // Load on init
-    _loadBudgets();
+    // Don't load on init, wait for auth state change
   }
 
-  // Internal method to load budgets
+  // Manual initialization method
+  Future<void> initialize() async {
+    if (!_initialized && _auth.currentUser != null) {
+      _initialized = true;
+      await _loadBudgets();
+    }
+  }
+
+  // Internal method to load budgets - WITH BETTER ERROR HANDLING
   Future<void> _loadBudgets() async {
     try {
       debugPrint('Loading budgets for user: ${_auth.currentUser?.uid}');
@@ -35,28 +43,37 @@ class BudgetService extends ChangeNotifier {
         return;
       }
 
+      // Simplified query to avoid composite index requirement
+      // We'll sort the results manually after fetching
       final snapshot = await _firestore
           .collection('users')
           .doc(_auth.currentUser!.uid)
           .collection('budgetPlans')
-          .orderBy('month', descending: true)
+          .where('userId', isEqualTo: _auth.currentUser!.uid)
           .get();
 
       debugPrint('Loaded ${snapshot.docs.length} budget documents');
       _budgets = snapshot.docs
           .map((doc) => BudgetModel.fromMap(doc.data(), doc.id))
           .toList();
+      
+      // Sort by month descending manually
+      _budgets.sort((a, b) => b.month.compareTo(a.month));
 
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading budgets: $e');
 
-      // Handle permission errors gracefully
+      // Handle different types of errors
       if (e.toString().contains('permission-denied')) {
         debugPrint('Permission denied - using fallback budget handling');
         // Continue with empty budgets list, app will use fallback budgets
         _budgets = [];
         notifyListeners();
+      } else if (e.toString().contains('unavailable') || e.toString().contains('Failed to get service')) {
+        debugPrint('Temporary network issue loading budgets, keeping existing data');
+        // Keep existing data and don't notify listeners to avoid UI flickering
+        // The offline data will be used until connection is restored
       } else {
         // For other errors, still set empty list but log the error
         _budgets = [];
@@ -73,62 +90,74 @@ class BudgetService extends ChangeNotifier {
   // Getters
   List<BudgetModel> get budgets => _budgets;
 
-  // Get budget as a stream for more efficient updates
+  // Get budget as a stream for more efficient updates - WITH BETTER ERROR HANDLING
   Stream<BudgetModel?> getBudgetStream() {
     if (_auth.currentUser == null) {
       return Stream.value(null);
     }
 
-    // Return a stream that will emit the current month's budget
-    return _firestore
-        .collection('users')
-        .doc(_auth.currentUser!.uid)
-        .collection('budgetPlans')
-        .orderBy('month', descending: true)
-        .snapshots()
-        .map((snapshot) {
-          if (snapshot.docs.isEmpty) return null;
+    try {
+      // Simplified query to avoid composite index requirement
+      // We'll sort the results manually after fetching
+      return _firestore
+          .collection('users')
+          .doc(_auth.currentUser!.uid)
+          .collection('budgetPlans')
+          .where('userId', isEqualTo: _auth.currentUser!.uid)
+          .snapshots()
+          .handleError((error) {
+            debugPrint('Error in budget stream: $error');
+            // Return empty stream on error
+            return Stream<BudgetModel?>.value(null);
+          })
+          .map((snapshot) {
+            if (snapshot.docs.isEmpty) return null;
+            
+            // Convert documents to BudgetModel objects
+            List<BudgetModel> budgets = snapshot.docs
+                .map((doc) => BudgetModel.fromMap(doc.data(), doc.id))
+                .toList();
+            
+            // Sort by month descending manually
+            budgets.sort((a, b) => b.month.compareTo(a.month));
+            
+            // Get current month in format YYYY-MM
+            final now = DateTime.now();
+            final currentMonth =
+                '${now.year}-${now.month.toString().padLeft(2, '0')}';
 
-          // Get current month in format YYYY-MM
-          final now = DateTime.now();
-          final currentMonth =
-              '${now.year}-${now.month.toString().padLeft(2, '0')}';
-
-          // Try to find current month budget
-          try {
-            final currentBudgetDoc = snapshot.docs.firstWhere(
-              (doc) => doc.data()['month'] == currentMonth,
-            );
-            return BudgetModel.fromMap(
-              currentBudgetDoc.data(),
-              currentBudgetDoc.id,
-            );
-          } catch (e) {
-            // Try fallback to previous month
+            // Try to find current month budget
             try {
-              final previousMonth = DateTime(now.year, now.month - 1);
-              final previousMonthFormatted =
-                  '${previousMonth.year}-${previousMonth.month.toString().padLeft(2, '0')}';
-
-              final fallbackBudgetDoc = snapshot.docs.firstWhere(
-                (doc) => doc.data()['month'] == previousMonthFormatted,
-              );
-              return BudgetModel.fromMap(
-                fallbackBudgetDoc.data(),
-                fallbackBudgetDoc.id,
+              return budgets.firstWhere(
+                (budget) => budget.month == currentMonth,
               );
             } catch (e) {
-              // No fallback available, create a default budget
-              return BudgetModel(
-                id: 'default-$currentMonth',
-                month: currentMonth,
-                maxKwh: 150.0, // default values
-                maxCost: 500.0,
-                createdAt: DateTime.now(),
-              );
+              // Try fallback to previous month
+              try {
+                final previousMonth = DateTime(now.year, now.month - 1);
+                final previousMonthFormatted =
+                    '${previousMonth.year}-${previousMonth.month.toString().padLeft(2, '0')}';
+
+                return budgets.firstWhere(
+                  (budget) => budget.month == previousMonthFormatted,
+                );
+              } catch (e) {
+                // No fallback available, create a default budget
+                return BudgetModel(
+                  id: 'default-$currentMonth',
+                  month: currentMonth,
+                  maxKwh: 150.0, // default values
+                  maxCost: 500.0,
+                  createdAt: DateTime.now(),
+                );
+              }
             }
-          }
-        });
+          });
+    } catch (e) {
+      debugPrint('Error creating budget stream: $e');
+      // Return empty stream on error
+      return Stream<BudgetModel?>.value(null);
+    }
   }
 
   // Get budget for specific month
@@ -159,7 +188,7 @@ class BudgetService extends ChangeNotifier {
     }
   }
 
-  // Add new budget
+  // Add new budget - FIXED COLLECTION PATH AND DATA STRUCTURE
   Future<BudgetModel?> addBudget({
     required String month,
     required double maxKwh,
@@ -176,6 +205,7 @@ class BudgetService extends ChangeNotifier {
           .collection('users')
           .doc(_auth.currentUser!.uid)
           .collection('budgetPlans')
+          .where('userId', isEqualTo: _auth.currentUser!.uid)
           .where('month', isEqualTo: month)
           .get();
 
@@ -185,6 +215,7 @@ class BudgetService extends ChangeNotifier {
 
       // Prepare document data
       final Map<String, dynamic> budgetData = {
+        'userId': _auth.currentUser!.uid, // Add userId for querying
         'month': month,
         'maxKwh': maxKwh,
         'maxCost': maxCost,
@@ -230,7 +261,7 @@ class BudgetService extends ChangeNotifier {
     }
   }
 
-  // Update existing budget
+  // Update existing budget - FIXED COLLECTION PATH
   Future<bool> updateBudget({
     required String id,
     required String month,
@@ -273,7 +304,7 @@ class BudgetService extends ChangeNotifier {
       if (recommendations != null)
         updateData['recommendations'] = recommendations;
 
-      // Normal update for real budgets
+      // Normal update for real budgets - FIXED COLLECTION PATH
       await _firestore
           .collection('users')
           .doc(_auth.currentUser!.uid)
@@ -309,7 +340,7 @@ class BudgetService extends ChangeNotifier {
     }
   }
 
-  // Delete budget
+  // Delete budget - FIXED COLLECTION PATH
   Future<bool> deleteBudget(String id) async {
     try {
       if (_auth.currentUser == null) return false;

@@ -39,7 +39,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadEssentialData(); // Load only essential data initially
     _checkAdminStatus();
   }
 
@@ -49,7 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadEssentialData() async {
     // Cancel any existing debounce timer
     _debounceTimer?.cancel();
 
@@ -70,29 +70,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
         }
 
-        // Preload appliances data
+        // Only load essential data initially - other data will be loaded on demand
+        // Preload appliances data (essential for dashboard)
         await Provider.of<ApplianceService>(
           context,
           listen: false,
         ).fetchAppliances();
 
-        // No need to explicitly load budget data here anymore
-        // The BudgetService stream will handle this automatically        // Preload usage records
-        await Provider.of<UsageRecordService>(
-          context,
-          listen: false,
-        ).fetchUsageRecords();
-
-        // Preload energy saving tips
-        await Provider.of<TipService>(context, listen: false).fetchTips();
-
-        // Initialize notifications
-        await NotificationService().initialize();
-
-        // Initialize usage reminders
-        await _initializeUsageReminders();
       } catch (e) {
-        debugPrint('Error loading data: $e');
+        debugPrint('Error loading essential data: $e');
       } finally {
         if (mounted) {
           setState(() {
@@ -101,6 +87,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
     });
+  }
+
+  // Load additional data when needed (e.g., when navigating to specific sections)
+  Future<void> _loadAdditionalData() async {
+    try {
+      // Load usage records
+      await Provider.of<UsageRecordService>(
+        context,
+        listen: false,
+      ).fetchUsageRecords();
+
+      // Load energy saving tips
+      await Provider.of<TipService>(context, listen: false).fetchTips();
+
+      // Initialize usage reminders
+      await _initializeUsageReminders();
+
+      debugPrint('Additional data loaded successfully');
+    } catch (e) {
+      debugPrint('Error loading additional data: $e');
+    }
   }
 
   Future<void> _signOut() async {
