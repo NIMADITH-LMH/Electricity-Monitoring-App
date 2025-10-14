@@ -68,9 +68,17 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => UsageNotifier()),
         // Create BudgetProvider with dependency on BudgetService
         ChangeNotifierProxyProvider<BudgetService, BudgetProvider>(
-          create: (_) => BudgetProvider(BudgetService()),
-          update: (_, budgetService, previous) =>
-              previous ?? BudgetProvider(budgetService),
+          create: (context) {
+            final budgetService = context.read<BudgetService>();
+            // Initialize the budget service
+            budgetService.initialize();
+            return BudgetProvider(budgetService);
+          },
+          update: (context, budgetService, previous) {
+            // Initialize the budget service if not already done
+            budgetService.initialize();
+            return previous ?? BudgetProvider(budgetService);
+          },
         ),
       ],
       child: MaterialApp(

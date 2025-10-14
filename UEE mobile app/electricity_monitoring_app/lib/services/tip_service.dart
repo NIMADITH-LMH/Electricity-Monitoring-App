@@ -20,7 +20,7 @@ class TipService extends ChangeNotifier {
   List<TipModel> get systemTips => _systemTips;
   List<String> get categories => _categories;
 
-  // Get tips from Firestore
+  // Get tips from Firestore - OPTIMIZED FOR PERFORMANCE
   Future<List<TipModel>> fetchTips() async {
     try {
       if (_auth.currentUser == null) {
@@ -30,12 +30,13 @@ class TipService extends ChangeNotifier {
 
       debugPrint('Fetching tips for user: ${_auth.currentUser!.uid}');
 
-      // Fetch user's custom tips
+      // Fetch user's custom tips with limit
       final userTipsSnapshot = await _firestore
           .collection('users')
           .doc(_auth.currentUser!.uid)
           .collection('tips')
           .orderBy('createdAt', descending: true)
+          .limit(20) // Limit to 20 most recent tips
           .get();
 
       _tips = userTipsSnapshot.docs
@@ -44,66 +45,75 @@ class TipService extends ChangeNotifier {
 
       debugPrint('Fetched ${_tips.length} user tips');
 
-      // Fetch system/admin tips (available to all users)
+      // Fetch system/admin tips with limit and in parallel for better performance
       List<TipModel> systemTips = [];
-      try {
-        final systemTipsSnapshot = await _firestore
-            .collection('tips')
-            .orderBy('createdAt', descending: true)
-            .get();
-
-        systemTips = systemTipsSnapshot.docs
-            .map((doc) => TipModel.fromMap(doc.data(), doc.id))
-            .toList();
-
-        debugPrint('Fetched ${systemTips.length} system tips');
-      } catch (systemTipsError) {
-        debugPrint('Error fetching system tips: $systemTipsError');
-        // systemTips remains empty list if there's an error
-      }
-
-      // Fetch admin tips and convert them to TipModel format
       List<TipModel> adminTips = [];
-      try {
-        final adminTipsSnapshot = await _firestore
-            .collection('admin_tips')
-            .where('isActive', isEqualTo: true)
-            .orderBy('createdAt', descending: true)
-            .get();
+      
+      // Use Future.wait to load system and admin tips in parallel
+      await Future.wait([
+        // Fetch system tips
+        () async {
+          try {
+            final systemTipsSnapshot = await _firestore
+                .collection('tips')
+                .orderBy('createdAt', descending: true)
+                .limit(10) // Limit to 10 most recent system tips
+                .get();
 
-        debugPrint('Fetched ${adminTipsSnapshot.docs.length} admin tips');
+            systemTips = systemTipsSnapshot.docs
+                .map((doc) => TipModel.fromMap(doc.data(), doc.id))
+                .toList();
 
-        adminTips = adminTipsSnapshot.docs.map((doc) {
-          final data = doc.data();
-          debugPrint('Processing admin tip: ${data['title']}');
-          // Convert AdminTipModel to TipModel for display
-          return TipModel(
-            id: doc.id,
-            title: data['title'] ?? '',
-            description: data['description'] ?? '',
-            category: data['category'] ?? '',
-            createdBy: 'admin', // Mark as admin-created
-            createdAt:
-                (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-            estimatedSavings: (data['estimatedSavings'] as num?)?.toDouble(),
-            difficulty: data['difficulty'] ?? 'medium',
-            potentialSavingsKwh:
-                (data['potentialSavingsKwh'] as num?)?.toDouble() ?? 0.0,
-          );
-        }).toList();
+            debugPrint('Fetched ${systemTips.length} system tips');
+          } catch (systemTipsError) {
+            debugPrint('Error fetching system tips: $systemTipsError');
+          }
+        }(),
+        
+        // Fetch admin tips
+        () async {
+          try {
+            final adminTipsSnapshot = await _firestore
+                .collection('admin_tips')
+                .where('isActive', isEqualTo: true)
+                .orderBy('createdAt', descending: true)
+                .limit(10) // Limit to 10 most recent admin tips
+                .get();
 
-        debugPrint(
-          'Converted ${adminTips.length} admin tips to TipModel format',
-        );
-      } catch (adminTipsError) {
-        debugPrint('Error fetching admin tips: $adminTipsError');
-        if (adminTipsError.toString().contains('permission-denied')) {
-          debugPrint(
-            'Permission denied for admin_tips collection. Check Firestore security rules.',
-          );
-        }
-        // adminTips remains empty list if there's an error
-      }
+            debugPrint('Fetched ${adminTipsSnapshot.docs.length} admin tips');
+
+            adminTips = adminTipsSnapshot.docs.map((doc) {
+              final data = doc.data();
+              debugPrint('Processing admin tip: ${data['title']}');
+              // Convert AdminTipModel to TipModel for display
+              return TipModel(
+                id: doc.id,
+                title: data['title'] ?? '',
+                description: data['description'] ?? '',
+                category: data['category'] ?? '',
+                createdBy: 'admin', // Mark as admin-created
+                createdAt:
+                    (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+                estimatedSavings: (data['estimatedSavings'] as num?)?.toDouble(),
+                difficulty: data['difficulty'] ?? 'medium',
+                potentialSavingsKwh:
+                    (data['potentialSavingsKwh'] as num?)?.toDouble() ?? 0.0,
+              );
+            }).toList();
+
+            debugPrint(
+              'Converted ${adminTips.length} admin tips to TipModel format',
+            );
+          } catch (adminTipsError) {
+            debugPrint('Error fetching admin tips: $adminTipsError');
+            if (adminTipsError.toString().contains('permission-denied')) {
+              debugPrint(
+                'Permission denied for admin_tips collection. Check Firestore security rules.',
+              );
+            }
+          }
+        }()
+      ]);
 
       // Combine system tips and admin tips
       _systemTips = [...systemTips, ...adminTips];
@@ -257,7 +267,7 @@ class TipService extends ChangeNotifier {
 
   // PERSONALIZED TIPS FEATURE
 
-  // Get user interaction data with tips
+  // Get user interaction data with tips - WITH BETTER ERROR HANDLING
   Future<List<UserTipModel>> getUserTipInteractions(String userId) async {
     try {
       final querySnapshot = await _firestore
@@ -271,17 +281,13 @@ class TipService extends ChangeNotifier {
         try {
           final data = doc.data();
 
-          // Safe timestamp handling for debugging
+          // Safe timestamp handling for debugging - ONLY LOG WARNINGS
           final lastUpdatedAt = data['lastUpdatedAt'];
-          if (lastUpdatedAt != null && lastUpdatedAt is Timestamp) {
-            final dateTime = lastUpdatedAt.toDate();
-            debugPrint(
-              'Tip interaction timestamp: $dateTime for doc ${doc.id}',
-            );
-          } else {
-            debugPrint(
-              'Warning: lastUpdatedAt field is null or not a Timestamp for doc ${doc.id}',
-            );
+          if (lastUpdatedAt == null) {
+            // This is expected for some documents, don't log as warning
+            // debugPrint('Info: lastUpdatedAt field is null for doc ${doc.id}');
+          } else if (lastUpdatedAt is! Timestamp) {
+            // debugPrint('Info: lastUpdatedAt is not a Timestamp for doc ${doc.id}: ${lastUpdatedAt.runtimeType}');
           }
 
           // Use our safer fromMap method that has null safety built in
@@ -295,6 +301,18 @@ class TipService extends ChangeNotifier {
       return results;
     } catch (e) {
       debugPrint('Error getting user tip interactions: $e');
+      // Handle network issues gracefully
+      if (e.toString().contains('permission-denied')) {
+        debugPrint('Permission denied getting user tip interactions');
+        // Return empty list instead of throwing error
+        return [];
+      } else if (e.toString().contains('unavailable') || 
+                 e.toString().contains('network') ||
+                 e.toString().contains('Failed to get service')) {
+        debugPrint('Network issue getting user tip interactions, returning empty list');
+        // Network issues are temporary, return empty list
+        return [];
+      }
       return [];
     }
   }

@@ -14,7 +14,9 @@ class BudgetProvider extends ChangeNotifier {
   // Constructor
   BudgetProvider(this._budgetService) {
     // Initialize by subscribing to the budget stream
-    _subscribeToBudgetStream();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _subscribeToBudgetStream();
+    });
   }
   
   // Getters
@@ -30,22 +32,29 @@ class BudgetProvider extends ChangeNotifier {
     // Cancel any existing subscription
     _budgetSubscription?.cancel();
     
-    // Subscribe to the budget stream
-    _budgetSubscription = _budgetService.getBudgetStream().listen(
-      (budget) {
-        _currentBudget = budget;
-        _isLoading = false;
-        _error = null;
-        notifyListeners();
-        debugPrint('BudgetProvider: Received budget update: ${budget?.toMap()}');
-      },
-      onError: (error) {
-        _error = error.toString();
-        _isLoading = false;
-        notifyListeners();
-        debugPrint('BudgetProvider: Error in budget stream: $_error');
-      }
-    );
+    try {
+      // Subscribe to the budget stream
+      _budgetSubscription = _budgetService.getBudgetStream().listen(
+        (budget) {
+          _currentBudget = budget;
+          _isLoading = false;
+          _error = null;
+          notifyListeners();
+          debugPrint('BudgetProvider: Received budget update: ${budget?.toMap()}');
+        },
+        onError: (error) {
+          _error = error.toString();
+          _isLoading = false;
+          notifyListeners();
+          debugPrint('BudgetProvider: Error in budget stream: $_error');
+        }
+      );
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('BudgetProvider: Error subscribing to budget stream: $e');
+    }
   }
   
   // Method to manually refresh the budget
@@ -53,7 +62,7 @@ class BudgetProvider extends ChangeNotifier {
     _subscribeToBudgetStream();
   }
   
-  // Add new budget (delegating to service)
+  // Add new budget (delegating to service) - WITH ERROR HANDLING
   Future<BudgetModel?> addBudget({
     required String month,
     required double maxKwh,
@@ -63,7 +72,10 @@ class BudgetProvider extends ChangeNotifier {
     List<String>? recommendations,
   }) async {
     try {
-      return await _budgetService.addBudget(
+      _isLoading = true;
+      notifyListeners();
+      
+      final result = await _budgetService.addBudget(
         month: month,
         maxKwh: maxKwh,
         maxCost: maxCost,
@@ -71,14 +83,20 @@ class BudgetProvider extends ChangeNotifier {
         description: description,
         recommendations: recommendations,
       );
+      
+      _isLoading = false;
+      notifyListeners();
+      return result;
     } catch (e) {
+      _isLoading = false;
       _error = e.toString();
       notifyListeners();
+      debugPrint('BudgetProvider: Error adding budget: $e');
       return null;
     }
   }
   
-  // Update existing budget (delegating to service)
+  // Update existing budget (delegating to service) - WITH ERROR HANDLING
   Future<bool> updateBudget({
     required String id,
     required String month,
@@ -89,6 +107,9 @@ class BudgetProvider extends ChangeNotifier {
     List<String>? recommendations,
   }) async {
     try {
+      _isLoading = true;
+      notifyListeners();
+      
       final result = await _budgetService.updateBudget(
         id: id,
         month: month,
@@ -98,10 +119,15 @@ class BudgetProvider extends ChangeNotifier {
         description: description,
         recommendations: recommendations,
       );
+      
+      _isLoading = false;
+      notifyListeners();
       return result;
     } catch (e) {
+      _isLoading = false;
       _error = e.toString();
       notifyListeners();
+      debugPrint('BudgetProvider: Error updating budget: $e');
       return false;
     }
   }
