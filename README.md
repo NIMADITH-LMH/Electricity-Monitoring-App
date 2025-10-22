@@ -2,11 +2,11 @@
 
 A comprehensive mobile application for monitoring electricity usage, managing appliances, setting budgets, and receiving energy-saving tips.
 
-## 📱 Overview
+##  Overview
 
 This repository contains a Flutter-based mobile application designed to help users monitor and optimize their electricity usage. For detailed instructions and technical information, please refer to the [App Documentation](UEE%20mobile%20app/electricity_monitoring_app/README.md).
 
-## ✨ Key Features
+##  Key Features
 
 - User authentication and profile management
 - Real-time electricity usage monitoring with detailed analytics
@@ -18,7 +18,7 @@ This repository contains a Flutter-based mobile application designed to help use
 - Daily usage breakdown with time-of-day analysis
 - Usage prediction and trend analysis
 
-## 🚀 Quick Start
+##  Quick Start
 
 ```bash
 # Clone the repository
